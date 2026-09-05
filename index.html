@@ -225,7 +225,7 @@
         <div class="c inc"><b style="height:75%;"></b><span class="d">D</span></div>
       </div>
     </div>
-    <div class="ai-card sev-warn" style="display:flex;">
+    <div class="ai-card sev-warn" style="display:flex;cursor:pointer;" onclick="switchView('v-pagos')" title="Ir a Pagos">
       <span class="ico">🟡</span>
       <div style="flex:1;"><div class="t">Pago de $450 en 2 días</div><div class="s">Pagar a tiempo = +20 pts de score</div></div>
       <span class="go">→</span>
@@ -557,11 +557,11 @@
     </div>
 
     <div class="bottom-nav">
-      <button class="on"><span class="ic">🏠</span>Inicio</button>
-      <button><span class="ic">📋</span>Movimientos</button>
-      <button><span class="ic">💳</span>Pagos</button>
-      <button><span class="ic">📊</span>Reportes</button>
-      <button><span class="ic">👤</span>Perfil</button>
+      <button class="on" data-view="v6"><span class="ic">🏠</span>Inicio</button>
+      <button data-view="v-movs"><span class="ic">📋</span>Movimientos</button>
+      <button data-view="v-pagos"><span class="ic">💳</span>Pagos</button>
+      <button data-view="v-rep"><span class="ic">📊</span>Reportes</button>
+      <button data-view="v-per"><span class="ic">👤</span>Perfil</button>
     </div>
   </section>
 
