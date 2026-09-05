@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Copiloto Financiero</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0b0f14; --bg-card: #121820; --bg-card2: #0e141b; --line: #1e2630;
+      --text: #e8ecf1; --muted: #8a94a3; --gold: #f5d78e; --cyan: #22d3ee;
+      --green: #22ff88; --red: #ff5d5d; --amber: #ffb020;
+      --blue: #2563eb; --blue-d: #1e3a8a; --blue-l: #e8effb;
+      --radius: 14px; --maxw: 1200px;
+    }
+    html, body { height: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+    #switcher { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 16px; background: rgba(10,14,19,.96); border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; }
+    #switcher .brand { color: var(--gold); letter-spacing: .04em; white-space: nowrap; }
+    #switcher select { flex: 1; max-width: 360px; background: var(--bg-card); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; outline: none; }
+    body.view-active { padding-top: 44px; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 10px; }
+    .kpi { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+    .kpi .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
+    .kpi .val { font-size: 22px; font-weight: 800; margin-top: 4px; }
+    .kpi .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .up { color: var(--green); } .down { color: var(--red); }
+    .card { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+    .card h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); margin-bottom: 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .muted { color: var(--muted); }
+    .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+    .bar > i { display: block; height: 100%; border-radius: 99px; }
+    .bar.cyan > i { background: linear-gradient(90deg,#0ea5e9,var(--cyan)); }
+    .bar.green > i { background: linear-gradient(90deg,#16a34a,var(--green)); }
+    .bar.amber > i { background: linear-gradient(90deg,#d97706,var(--amber)); }
+    .ai-score { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 99px; background: var(--bg-card2); border: 1px solid var(--line); font-size: 13px; font-weight: 800; }
+    .ai-score .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .ai-score.sev-good .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .ai-score.sev-warn .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+    .ai-score.sev-bad  .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .ai-card { display: none; align-items: flex-start; gap: 12px; background: var(--bg-card); border: 1px solid var(--line); border-left: 3px solid var(--cyan); border-radius: 12px; padding: 12px 14px; margin-top: 14px; }
+    .ai-card .ico { font-size: 18px; line-height: 1.2; }
+    .ai-card .t { font-size: 14px; font-weight: 700; }
+    .ai-card .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .ai-card .go { margin-left: auto; color: var(--cyan); font-weight: 800; font-size: 16px; white-space: nowrap; padding: 6px; }
+    .ai-card.sev-warn { border-left-color: var(--amber); }
+    .ai-card.sev-bad  { border-left-color: var(--red); }
+    .ai-card.sev-good { border-left-color: var(--green); }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 900; display: flex; background: rgba(12,16,22,.97); border-top: 1px solid var(--line); }
+    .bottom-nav button { flex: 1; background: none; border: none; color: var(--muted); font-size: 10px; font-weight: 700; padding: 10px 2px 12px; text-transform: uppercase; letter-spacing: .06em; }
+    .bottom-nav button.on { color: var(--gold); }
+    .bottom-nav button .ic { font-size: 18px; display: block; margin-bottom: 2px; }
+    .v1, .v2 { max-width: 520px; margin: 0 auto; padding: 14px 14px 90px; }
+    .v1 hdr, .v2 hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0 14px; }
+    .v1 hdr .ttl, .v2 hdr .ttl { font-size: 17px; font-weight: 800; }
+    .v1 .kpi { background: #f0f4ff; border-color: #dbe4f7; color: #14213d; }
+    .v1 .kpi .val { color: var(--blue-d); }
+    .v1 .card { background: #fff; border-color: #e3e9f5; color: #14213d; }
+    .v1 .card h3 { color: var(--blue-d); }
+    .v1 .bar { background: #e5eaf5; }
+    .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .wd { background: var(--bg-card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center; font-size: 10px; font-weight: 700; color: var(--muted); }
+    .wd .d { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .wd .amt { font-size: 11px; color: var(--green); margin-top: 3px; }
+    .wd .em { display: block; font-size: 14px; margin-top: 2px; }
+    .wd.today { border-color: var(--cyan); }
+    .bill { margin-top: 10px; }
+    .bill .top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+    .bill .top .due { color: var(--muted); font-size: 11px; font-weight: 600; }
+    .v3 { display: grid; grid-template-columns: 220px 1fr; gap: 0; min-height: 100vh; }
+    .v3 .side { background: #f4f7fd; border-right: 1px solid #dfe6f4; padding: 20px 14px; color: #14213d; }
+    .v3 .side .logo { font-size: 16px; font-weight: 800; color: var(--blue-d); margin-bottom: 22px; }
+    .v3 .side nav button { display: block; width: 100%; text-align: left; background: none; border: none; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; color: #42507a; margin-bottom: 4px; }
+    .v3 .side nav button.on { background: var(--blue); color: #fff; }
+    .v3 .main { padding: 20px; color: #14213d; }
+    .v3 .main .kpi { background: #fff; border-color: #e3e9f5; }
+    .v3 .main .kpi .val { color: var(--blue-d); }
+    .v3 .card { background: #fff; border-color: #e3e9f5; color: #14213d; }
+    .v3 .card h3 { color: var(--blue-d); }
+    .v3 table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .v3 td, .v3 th { padding: 8px 6px; text-align: left; border-bottom: 1px solid #edf1fa; }
+    .v4 { display: grid; grid-template-columns: 62px 1fr; min-height: 100vh; }
+    .v4 .rail { background: var(--bg-card2); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 6px; }
+    .v4 .rail button { width: 40px; height: 40px; background: none; border: none; border-radius: 10px; color: var(--muted); font-size: 17px; }
+    .v4 .rail button.on { background: var(--cyan); color: #04111a; }
+    .v4 .main { padding: 20px; }
+    .v4 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .v4 .topbar .ttl { font-size: 18px; font-weight: 800; }
+    .v4 .topbar .hint { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid4 { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 14px; }
+    .v5 { max-width: var(--maxw); margin: 0 auto; padding: 18px 18px 60px; color: #16203a; background: #fff; min-height: 100vh; }
+    .v5 h1 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .v5 .sub { font-size: 12px; color: #66718c; margin-bottom: 18px; }
+    .v5 .kpi { background: #f6f9ff; border-color: #e2e9f8; }
+    .v5 .kpi .val { color: #16305f; }
+    .v5 .card { background: #fff; border-color: #e5ebf7; box-shadow: 0 1px 3px rgba(20,40,80,.06); }
+    .v5 .card h3 { color: #1d3a6e; }
+    .ai-panel { background: linear-gradient(135deg,#e8f1ff,#ffeef6); border: 1px solid #d8e4f8; border-radius: var(--radius); padding: 16px; }
+    .ai-panel .h { display: flex; gap: 10px; align-items: center; font-weight: 800; color: #1d3a6e; font-size: 13px; margin-bottom: 8px; }
+    .ai-panel .h .bot { font-size: 20px; }
+    .ai-panel p { font-size: 13px; color: #39466a; line-height: 1.6; }
+    .pay { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5ebf7; border-radius: 12px; background: #fbfdff; }
+    .pay .tag { padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 800; color: #fff; }
+    .pay .tag.hi { background: var(--red); }
+    .pay .tag.md { background: var(--amber); }
+    .pay .tag.lo { background: var(--green); }
+    .pay .nm { font-size: 13px; font-weight: 700; }
+    .pay .am { font-size: 15px; font-weight: 800; color: #14213d; }
+    .pay button { margin-left: auto; background: var(--blue); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 700; }
+    .pay button.grn { background: var(--green); color: #06230f; }
+    .chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; padding-top: 10px; }
+    .chart .c { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .chart .c b { width: 100%; max-width: 26px; border-radius: 6px 6px 0 0; }
+    .chart .c.inc b { background: linear-gradient(180deg,var(--cyan),#0e7490); }
+    .chart .c.exp b { background: linear-gradient(180deg,#f472b6,#be185d); }
+    .chart .c .d { font-size: 9px; color: var(--muted); font-weight: 700; }
+    @media (max-width: 768px) {
+      .v3, .v4 { grid-template-columns: 1fr; }
+      .v3 .side { display: none; }
+      .v4 .rail { display: none; }
+      .grid2 { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 769px) {
+      .v1, .v2 { max-width: 520px; margin: 0 auto; }
+    }
+  </style>
+</head><body class="view-active">
+  <div id="switcher">
+    <span class="brand">✦ Copiloto Financiero</span>
+    <select id="viewSel" onchange="switchView(this.value)">
+      <option value="v1">📱 Móvil · Mi Finanzas</option>
+      <option value="v2">📱 Móvil · ProFinance</option>
+      <option value="v3">🖥 Desktop · Mi Finanzas</option>
+      <option value="v4" selected>🖥 Desktop · FinancePro</option>
+      <option value="v5">☀️ Monolito · Actualización Matutina</option>
+    </select>
+  </div>
+
+  <!-- VIEW 1 · Móvil Mi Finanzas -->
+  <section class="view v1" id="v1">
+    <hdr>
+      <div>
+        <div class="ttl">Mi Finanzas</div>
+        <div class="muted" style="font-size:11px;">Septiembre 2026</div>
+      </div>
+      <div class="ai-score sev-good"><span class="dot"></span>742</div>
+    </hdr>
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Ingresos</div><div class="val up">$2,450.00</div><div class="sub">▲ +12.5%</div></div>
+      <div class="kpi"><div class="lbl">Gastos</div><div class="val down">$1,675.20</div><div class="sub">▼ -4.3%</div></div>
+      <div class="kpi"><div class="lbl">Balance</div><div class="val">$774.80</div><div class="sub">+$87 vs ayer</div></div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <div class="row"><h3 style="margin:0;">Presupuesto mensual</h3><span style="font-size:12px;font-weight:800;">68%</span></div>
+      <div class="bar amber" style="margin-top:8px;"><i style="width:68%"></i></div>
+      <div class="muted" style="font-size:11px;margin-top:6px;">$1,700 de $2,500 usados</div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <h3>Registro rápido</h3>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:800;background:#fff;color:#14213d;border:1px solid #e3e9f5;">INGRESO</button>
+        <button style="flex:1;padding:8px;border-radius:8px;border:none;font-weight:800;background:#ffe9ec;color:#c81e3c;">GASTO</button>
+      </div>
+      <div style="font-size:28px;font-weight:800;color:#14213d;margin-bottom:10px;">$ <span style="color:#c7d2e5;">0</span></div>
+      <select style="width:100%;padding:10px;border-radius:8px;border:1px solid #e3e9f5;font-size:13px;font-weight:600;color:#14213d;">
+        <option>Comida y Bebida</option><option>Renta</option><option>Servicios</option>
+        <option>Transporte</option><option>Ocio</option><option>Otros</option>
+      </select>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input placeholder="Notas (opcional)" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e3e9f5;font-size:12px;">
+        <button style="padding:10px 16px;border-radius:8px;border:none;background:var(--blue-d);color:#fff;font-weight:800;">GUARDAR</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <h3>Resumen semanal</h3>
+      <div class="chart">
+        <div class="c inc"><b style="height:70%;"></b><span class="d">L</span></div>
+        <div class="c exp"><b style="height:40%;"></b><span class="d">M</span></div>
+        <div class="c inc"><b style="height:90%;"></b><span class="d">M</span></div>
+        <div class="c exp"><b style="height:55%;"></b><span class="d">J</span></div>
+        <div class="c inc"><b style="height:60%;"></b><span class="d">V</span></div>
+        <div class="c exp"><b style="height:30%;"></b><span class="d">S</span></div>
+        <div class="c inc"><b style="height:75%;"></b><span class="d">D</span></div>
+      </div>
+    </div>
+    <div class="ai-card sev-warn" style="display:flex;">
+      <span class="ico">🟡</span>
+      <div style="flex:1;"><div class="t">Pago de $450 en 2 días</div><div class="s">Pagar a tiempo = +20 pts de score</div></div>
+      <span class="go">→</span>
+    </div>
+    <div class="bottom-nav">
+      <button class="on"><span class="ic">🏠</span>Inicio</button>
+      <button><span class="ic">📋</span>Movimientos</button>
+      <button><span class="ic">📊</span>Reportes</button>
+      <button><span class="ic">👤</span>Perfil</button>
+    </div>
+  </section>
+
+  <!-- VIEW 2 · Móvil ProFinance -->
+  <section class="view v2" id="v2">
+    <hdr>
+      <div class="ttl">ProFinance</div>
+      <div class="ai-score sev-warn"><span class="dot"></span>688</div>
+    </hdr>
+    <div class="card">
+      <div class="row"><h3 style="margin:0;">OCT 14 - 20, 2026</h3><span style="font-size:11px;font-weight:700;color:var(--cyan);">Today</span></div>
+      <div class="week" style="margin-top:12px;">
+        <div class="wd"><div class="d">L</div><div class="amt">$300</div><span class="em">🟢</span></div>
+        <div class="wd"><div class="d">M</div><div class="amt">$250</div><span class="em">🟢</span></div>
+        <div class="wd"><div class="d">M</div><div class="amt">$400</div><span class="em">💼</span></div>
+        <div class="wd"><div class="d">J</div><div class="amt">$275</div><span class="em">💼</span></div>
+        <div class="wd today"><div class="d">V</div><div class="amt">$350</div><span class="em">💼</span></div>
+        <div class="wd"><div class="d">S</div><div class="amt">$0</div><span class="em">•</span></div>
+        <div class="wd"><div class="d">D</div><div class="amt">$0</div><span class="em">•</span></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <div class="row">
+        <div>
+          <div class="muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">Projected Savings</div>
+          <div style="font-size:24px;font-weight:800;color:var(--green);">$2,150.75</div>
+        </div>
+        <span style="font-size:11px;font-weight:800;color:var(--green);background:rgba(34,255,136,.12);padding:3px 8px;border-radius:99px;">▲ +12%</span>
+      </div>
+      <div class="chart" style="height:70px;">
+        <div class="c inc"><b style="height:40%;"></b></div>
+        <div class="c inc"><b style="height:60%;"></b></div>
+        <div class="c exp"><b style="height:35%;"></b></div>
+        <div class="c inc"><b style="height:80%;"></b></div>
+        <div class="c inc"><b style="height:70%;"></b></div>
+        <div class="c exp"><b style="height:45%;"></b></div>
+        <div class="c inc"><b style="height:95%;"></b></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <h3>Bill Progress</h3>
+      <div class="bill">
+        <div class="top"><span>Car Payment</span><span class="due">Due: 22</span></div>
+        <div class="bar green"><i style="width:80%"></i></div>
+      </div>
+      <div class="bill">
+        <div class="top"><span>Rent</span><span class="due">Due: NOV</span></div>
+        <div class="bar amber"><i style="width:50%"></i></div>
+      </div>
+    </div>
+    <div class="ai-card sev-warn" style="display:flex;">
+      <span class="ico">🤖</span>
+      <div style="flex:1;"><div class="t">Heads up! Necesitas $400 de ingreso</div><div class="s">Apuntar a tu meta viernes y sábado</div></div>
+      <span class="go">→</span>
+    </div>
+    <div class="bottom-nav">
+      <button class="on"><span class="ic">📊</span>Dashboard</button>
+      <button><span class="ic">🧾</span>Bills</button>
+      <button><span class="ic">📈</span>Projections</button>
+      <button><span class="ic">🔔</span>Alerts</button>
+      <button><span class="ic">👤</span>Profile</button>
+    </div>
+  </section>
+
+  <!-- VIEW 3 · Desktop Mi Finanzas -->
+  <section class="view v3" id="v3">
+    <aside class="side">
+      <div class="logo">Mi Finanzas</div>
+      <nav>
+        <button class="on">Dashboard</button>
+        <button>Transactions</button>
+        <button>Reports</button>
+        <button>Profile</button>
+        <button>Goals</button>
+        <button>Settings</button>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="row" style="margin-bottom:16px;">
+        <div style="font-size:18px;font-weight:800;color:#14213d;">Este Mes</div>
+        <div class="ai-score sev-good"><span class="dot"></span>742</div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="lbl">Income</div><div class="val up">$2,450</div></div>
+        <div class="kpi"><div class="lbl">Expenses</div><div class="val down">$1,675.20</div></div>
+        <div class="kpi"><div class="lbl">Balance</div><div class="val">$774.80</div></div>
+      </div>
+      <div class="grid2" style="margin-top:16px;">
+        <div class="card">
+          <h3>Recent Transactions</h3>
+          <table>
+            <tr><th>Fecha</th><th>Categoría</th><th>Monto</th></tr>
+            <tr><td>Sep 3</td><td>Comida</td><td class="down">-$18.40</td></tr>
+            <tr><td>Sep 3</td><td>Transporte</td><td class="down">-$42.00</td></tr>
+            <tr><td>Sep 2</td><td>Ingreso</td><td class="up">+$112.00</td></tr>
+            <tr><td>Sep 2</td><td>Renta</td><td class="down">-$1,200</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <div class="row"><h3 style="margin:0;">Summary & Insights</h3></div>
+          <div style="margin-top:10px;font-size:13px;font-weight:700;">Total Monthly Income</div>
+          <div style="font-size:20px;font-weight:800;color:#16305f;">$2,450.00</div>
+          <div style="font-size:13px;font-weight:700;margin-top:10px;">Total Monthly Expenses</div>
+          <div style="font-size:20px;font-weight:800;color:#c81e3c;">$1,675.20</div>
+          <div class="ai-card sev-warn" style="display:flex;margin-top:12px;">
+            <span class="ico">💡</span>
+            <div><div class="t">Ocio: 92% del presupuesto</div><div class="s">Faltan 8 días</div></div>
+            <span class="go">→</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- VIEW 4 · Desktop FinancePro (PRINCIPAL) -->
+  <section class="view v4 active" id="v4">
+    <div class="rail">
+      <button class="on">▦</button><button>↗</button><button>↘</button><button>□</button>
+      <button>▦</button><button>☰</button><button>⬢</button><button>✎</button><button>⚙</button>
+    </div>
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <div class="ttl">FinancePro</div>
+          <div class="hint">OCT 14 - 20, 2026 · Dashboard</div>
+        </div>
+        <div class="ai-score sev-good"><span class="dot"></span>742</div>
+      </div>
+      <div class="grid4">
+        <div class="card">
+          <div class="muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">Projected Savings</div>
+          <div style="font-size:26px;font-weight:800;color:var(--green);">$2,150.75</div>
+          <span style="font-size:11px;font-weight:800;color:var(--green);background:rgba(34,255,136,.12);padding:3px 8px;border-radius:99px;">▲ +12%</span>
+        </div>
+        <div class="card">
+          <div class="muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">Income Target Progress</div>
+          <div style="font-size:26px;font-weight:800;">$1,900</div>
+          <div class="muted" style="font-size:11px;">de $2,100 · 90%</div>
+          <div class="bar cyan" style="margin-top:8px;"><i style="width:90%"></i></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:8px;">Budget Targets</h3>
+          <div class="bill">
+            <div class="top"><span style="font-size:12px;">Rent Fund</span><span style="font-size:11px;color:var(--muted);">1500/1800</span></div>
+            <div class="bar green"><i style="width:85%"></i></div>
+          </div>
+          <div class="bill">
+            <div class="top"><span style="font-size:12px;">General Ops</span><span style="font-size:11px;color:var(--muted);">900/1200</span></div>
+            <div class="bar cyan"><i style="width:75%"></i></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:8px;">Goal Tracking</h3>
+          <div class="bill">
+            <div class="top"><span style="font-size:12px;">Ahorro auto</span><span style="font-size:11px;color:var(--muted);">60%</span></div>
+            <div class="bar amber"><i style="width:60%"></i></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px;">Faltan $3,200 de $8,000</div>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:14px;">
+        <div class="card">
+          <h3>Future Cash Flow Projections</h3>
+          <div class="chart" style="height:110px;">
+            <div class="c inc"><b style="height:35%;"></b><span class="d">1</span></div>
+            <div class="c inc"><b style="height:50%;"></b><span class="d">5</span></div>
+            <div class="c inc"><b style="height:42%;"></b><span class="d">9</span></div>
+            <div class="c inc"><b style="height:68%;"></b><span class="d">13</span></div>
+            <div class="c exp"><b style="height:40%;"></b><span class="d">17</span></div>
+            <div class="c inc"><b style="height:78%;"></b><span class="d">21</span></div>
+            <div class="c inc"><b style="height:92%;"></b><span class="d">25</span></div>
+            <div class="c exp"><b style="height:55%;"></b><span class="d">30</span></div>
+          </div>
+          <div class="muted" style="font-size:10px;margin-top:6px;">Nov 1 - Nov 30 · Projected on hand vs expenses</div>
+        </div>
+        <div class="card">
+          <h3>Alert Cards</h3>
+          <div class="ai-card sev-bad" style="display:flex;margin-top:6px;">
+            <span class="ico">🚗</span>
+            <div style="flex:1;"><div class="t">CAR PAYMENT · $350</div><div class="s">Due Oct 22</div></div>
+            <span class="go">→</span>
+          </div>
+          <div class="ai-card sev-warn" style="display:flex;margin-top:8px;">
+            <span class="ico">🏠</span>
+            <div style="flex:1;"><div class="t">RENT · $1,800</div><div class="s">Due Nov 1</div></div>
+            <span class="go">→</span>
+          </div>
+          <div class="ai-card sev-good" style="display:flex;margin-top:8px;">
+            <span class="ico">🟢</span>
+            <div style="flex:1;"><div class="t">+20 pts: pagaste a tiempo</div><div class="s">Historial positivo</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3>Asistente de IA · Notas y Análisis</h3>
+        <div class="ai-card sev-warn" style="display:flex;margin-top:6px;">
+          <span class="ico">🟡</span>
+          <div style="flex:1;"><div class="t">Desvío de $35.00 sin registrar</div><div class="s">Sugerencia: categorizar como "Ocio" o "Varios"</div></div>
+          <span class="go">→</span>
+        </div>
+        <div class="ai-card sev-bad" style="display:flex;margin-top:8px;">
+          <span class="ico">🔴</span>
+          <div style="flex:1;"><div class="t">Pago del carro ($900) se acerca</div><div class="s">Faltan $400. Plan: trabajar sábado o domingo</div></div>
+          <span class="go">→</span>
+        </div>
+        <div class="ai-card sev-good" style="display:flex;margin-top:8px;">
+          <span class="ico">🟢</span>
+          <div style="flex:1;"><div class="t">Ahorro mensual proyectado +15%</div><div class="s">Sigue así: meta del mes en camino</div></div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- VIEW 5 · Monolito Actualización Matutina -->
+  <section class="view v5" id="v5">
+    <h1>Actualización Matutina del Banco</h1>
+    <div class="sub">Concilia tu saldo real y prioriza pagos · Jue 04 Sep 2026</div>
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Transferencias recibidas</div><div class="val up">$12,456.89</div><div class="sub">▲ 5.26% · 128 trans</div></div>
+      <div class="kpi"><div class="lbl">Pagos de facturas</div><div class="val down">$450.00</div><div class="sub">▼ 6.15% · Toda factura</div></div>
+      <div class="kpi"><div class="lbl">Nuevas transacciones</div><div class="val">18</div><div class="sub">▲ 12.25% vs anterior</div></div>
+      <div class="kpi"><div class="lbl">Saldo real hoy</div><div class="val" style="color:#16305f;">$10,000.00</div><div class="sub">Verificado y conciliado</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">
+      <div class="card">
+        <h3>Balance Real de Hoy</h3>
+        <div style="font-size:30px;font-weight:800;color:#16305f;">$10,000.00</div>
+        <div class="muted" style="font-size:11px;">Balance hoy: $10,000 · Proyección: $10,000</div>
+        <div class="chart" style="height:80px;">
+          <div class="c inc"><b style="height:40%;"></b><span class="d">1</span></div>
+          <div class="c inc"><b style="height:55%;"></b><span class="d">6</span></div>
+          <div class="c inc"><b style="height:48%;"></b><span class="d">11</span></div>
+          <div class="c inc"><b style="height:70%;"></b><span class="d">16</span></div>
+          <div class="c inc"><b style="height:88%;"></b><span class="d">22</span></div>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="h"><span class="bot">🤖</span> AI Copilot · Análisis de Efectivo</div>
+        <p>Tu flujo de caja actual <b>supera las proyecciones</b>. Se recomienda reservar para el pago de la tarjeta de combustible y mantener el colchón para fechas críticas.</p>
+        <p style="margin-top:8px;">🟢 <b>Ahorro potencial:</b> reducir Ocio liberaría ~$150 este mes.</p>
+        <p style="margin-top:6px;">🟡 <b>Acción:</b> mantener el target de income viernes/sábado para cubrir el pago del carro.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Plan Operativo de Pagos Recomendado</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;">
+        <div class="pay"><span class="tag hi">ALTA</span><div><div class="nm">Renta / Servicios</div><div class="am">$450.00</div></div><button>PAGAR</button></div>
+        <div class="pay"><span class="tag md">MEDIA</span><div><div class="nm">Tarjeta (mínimo)</div><div class="am">$120.00</div></div><button>PAGAR</button></div>
+        <div class="pay"><span class="tag lo">FONDO</span><div><div class="nm">Combustible</div><div class="am">$50.00</div></div><button class="grn">AGENDAR</button></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Proyección vs Saldo Real</h3>
+      <div class="chart" style="height:100px;">
+        <div class="c inc"><b style="height:60%;"></b><span class="d">1</span></div>
+        <div class="c exp"><b style="height:30%;"></b><span class="d">2</span></div>
+        <div class="c inc"><b style="height:75%;"></b><span class="d">6</span></div>
+        <div class="c exp"><b style="height:40%;"></b><span class="d">8</span></div>
+        <div class="c inc"><b style="height:90%;"></b><span class="d">12</span></div>
+        <div class="c exp"><b style="height:50%;"></b><span class="d">15</span></div>
+        <div class="c inc"><b style="height:80%;"></b><span class="d">20</span></div>
+      </div>
+      <div class="row" style="margin-top:10px;font-size:11px;">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--cyan);"></span> Ingresos proyectados</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--red);"></span> Gastos proyectados</span>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function switchView(v) {
+      document.querySelectorAll('.view').forEach(function(el) { el.classList.remove('active'); });
+      var target = document.getElementById(v);
+      if (target) target.classList.add('active');
+    }
+    switchView('v4');
+  </script>
+</body>
+</html>
