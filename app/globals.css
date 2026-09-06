@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+}
+
+html, body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .surface {
+    @apply rounded-2xl border border-slate-700/50 bg-slate-800/60 backdrop-blur-sm;
+  }
+  .surface-elevated {
+    @apply rounded-2xl border border-slate-600/50 bg-gradient-to-br from-slate-800 to-slate-900 shadow-xl shadow-black/30;
+  }
+  .stat-label {
+    @apply text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400;
+  }
+  .stat-value {
+    @apply font-[family-name:var(--font-space-grotesk)] text-2xl font-bold tracking-tight text-slate-50;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-2.5 py-1 text-[11px] font-semibold text-slate-300;
+  }
+  .chip-green {
+    @apply border-emerald-500/40 bg-emerald-500/10 text-emerald-400;
+  }
+  .chip-blue {
+    @apply border-sky-500/40 bg-sky-500/10 text-sky-400;
+  }
+  .chip-red {
+    @apply border-red-500/40 bg-red-500/10 text-red-400;
+  }
+  .chip-amber {
+    @apply border-amber-500/40 bg-amber-500/10 text-amber-400;
+  }
+  .chip-gray {
+    @apply border-slate-600/40 bg-slate-700/30 text-slate-400;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 transition-all hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/40 px-4 py-3 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-700/60 active:scale-[0.98];
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 transition-all focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
