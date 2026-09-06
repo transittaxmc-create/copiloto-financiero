@@ -1,8 +1,28 @@
 ﻿"use client";
 
 import { useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { Home, MapPin, Coffee, ChevronDown } from 'lucide-react';
 import BottomNav from './BottomNav';
+
+// Cliente Supabase con variables de entorno (inicializacion perezosa: usa EXACTAMENTE tus env vars NEXT_PUBLIC_*)
+let _supabase: ReturnType<typeof createClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+    );
+  }
+  return _supabase;
+}
+
+interface GPSPoint {
+  name: string;
+  city: string;
+  time: string;
+  iso: string;
+}
 
 export default function DailyEntry() {
   const [gross, setGross] = useState('');
@@ -10,9 +30,10 @@ export default function DailyEntry() {
   const [tolls, setTolls] = useState('');
   const [fee, setFee] = useState('');
   const [ref, setRef] = useState('');
-  const [pickup, setPickup] = useState<{ name: string; city: string; time: string } | null>(null);
-  const [dropoff, setDropoff] = useState<{ name: string; city: string; time: string } | null>(null);
+  const [pickup, setPickup] = useState<GPSPoint | null>(null);
+  const [dropoff, setDropoff] = useState<GPSPoint | null>(null);
   const [platform, setPlatform] = useState('Uber');
+  const [saving, setSaving] = useState(false);
 
   const netPayout = (parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0) - (parseFloat(fee) || 0);
   const grossIncome = (parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0);
@@ -29,6 +50,52 @@ export default function DailyEntry() {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()} · ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+  };
+
+  // INSERT en la tabla trips (status: pending) + limpiar el formulario
+  const handleSave = async () => {
+    if (!gross && !tips && !tolls) {
+      alert('Ingresa al menos el Gross fare antes de guardar.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const supabase = getSupabase();
+      const now = new Date().toISOString();
+      const { error } = await (supabase.from('trips') as any).insert({
+        platform_id: platform.toLowerCase(),
+        pickup_time: pickup?.iso || now,
+        dropoff_time: dropoff?.iso || null,
+        pickup_gps: null,
+        dropoff_gps: null,
+        earnings: parseFloat(gross) || 0,
+        extra_cash: 0,
+        tips: parseFloat(tips) || 0,
+        tolls: parseFloat(tolls) || 0,
+        platform_fee: parseFloat(fee) || 0,
+        black_car_phones_fee: 2.75,
+        gross: grossIncome,
+        net: netPayout,
+        status: 'pending',
+        trip_notes: ref,
+      });
+      if (error) throw error;
+
+      // Limpiar la pagina despues de guardar
+      setGross('');
+      setTips('');
+      setTolls('');
+      setFee('');
+      setRef('');
+      setPickup(null);
+      setDropoff(null);
+      alert('Trip guardado en Supabase');
+    } catch (err) {
+      console.error('Error al guardar trip:', err);
+      alert('Error al guardar: ' + (err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -93,13 +160,13 @@ export default function DailyEntry() {
       {/* Botones grandes de accion */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <button 
-          onClick={() => setPickup({ name: 'Residencia', city: 'Lindenhurst', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) })} 
+          onClick={() => setPickup({ name: 'Residencia', city: 'Lindenhurst', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), iso: new Date().toISOString() })} 
           className="bg-green-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <MapPin size={18} /> Pickup now
         </button>
         <button 
-          onClick={() => setDropoff({ name: 'Business', city: 'Copiague', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) })} 
+          onClick={() => setDropoff({ name: 'Business', city: 'Copiague', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), iso: new Date().toISOString() })} 
           className="bg-blue-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <MapPin size={18} /> Dropoff now
@@ -187,8 +254,12 @@ export default function DailyEntry() {
         </div>
       </div>
 
-      <button className="w-full bg-green-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
-        ✓ Guardar Trip
+      <button 
+        onClick={handleSave} 
+        disabled={saving}
+        className="w-full bg-green-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-50"
+      >
+        {saving ? 'Guardando...' : '✓ Guardar Trip'}
       </button>
       <BottomNav />
     </div>
