@@ -50,7 +50,7 @@ export default function ProactiveNotifier() {
       // 4. Calcular la proxima fecha de pago para cada bill
       const today = new Date();
       const upcomingBills = (bills || [])
-        .map((bill: { due_day: number; [key: string]: unknown }) => {
+        .map((bill: { due_day: number; amount: number; name: string; [key: string]: unknown }) => {
           const nextDue = new Date(today);
           nextDue.setDate(bill.due_day);
           if (nextDue < today) nextDue.setMonth(nextDue.getMonth() + 1);
