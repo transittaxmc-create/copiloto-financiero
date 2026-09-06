@@ -1,167 +1,68 @@
 ﻿"use client";
 
-import { useState, useEffect } from 'react';
-import { Home, MapPin, Coffee, ChevronDown, Save } from 'lucide-react';
+import { useState } from 'react';
+import { Home, MapPin, Coffee, ChevronDown } from 'lucide-react';
 import BottomNav from './BottomNav';
-import { useSupabase } from '@/lib/supabase';
-
-interface GPSLocation {
-  name: string;
-  city: string;
-  time: string;
-  lat?: number;
-  lng?: number;
-}
 
 export default function DailyEntry() {
-  const supabase = useSupabase();
-  const [platform, setPlatform] = useState('uber');
   const [gross, setGross] = useState('');
   const [tips, setTips] = useState('');
   const [tolls, setTolls] = useState('');
   const [fee, setFee] = useState('');
   const [ref, setRef] = useState('');
-  const [pickup, setPickup] = useState<GPSLocation | null>(null);
-  const [dropoff, setDropoff] = useState<GPSLocation | null>(null);
-  const [isBreak, setIsBreak] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [pickup, setPickup] = useState<{ name: string; city: string; time: string } | null>(null);
+  const [dropoff, setDropoff] = useState<{ name: string; city: string; time: string } | null>(null);
+  const [platform, setPlatform] = useState('Uber');
 
-  // Update clock
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const platforms = [
-    { id: 'uber', name: 'Uber' },
-    { id: 'lyft', name: 'Lyft' },
-    { id: 'via', name: 'Via' },
-  ];
-
-  const platformsOpen = platforms.map(p => p.id === platform);
+  const netPayout = (parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0) - (parseFloat(fee) || 0);
+  const grossIncome = (parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0);
 
   const getGreeting = () => {
-    const hour = currentTime.getHours();
+    const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
-  };
-
-  const netPayout = (parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0) - (parseFloat(fee) || 0);
-  const grossIncome = (parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0);
-
-  const handlePickup = () => {
-    setPickup({
-      name: 'Current Location',
-      city: 'Lindenhurst',
-      time: formatTime(currentTime),
-      lat: 40.7538,
-      lng: -73.2954,
-    });
-  };
-
-  const handleDropoff = () => {
-    setDropoff({
-      name: 'Destination',
-      city: 'Copiague',
-      time: formatTime(currentTime),
-      lat: 40.7638,
-      lng: -73.2854,
-    });
-  };
-
-  const handleSaveTrip = async () => {
-    setSaving(true);
-    try {
-      const tripData = {
-        platform_id: platform,
-        pickup_time: new Date().toISOString(),
-        dropoff_time: dropoff ? new Date().toISOString() : null,
-        pickup_gps: pickup ? { lat: pickup.lat, lng: pickup.lng } : null,
-        dropoff_gps: dropoff ? { lat: dropoff.lat, lng: dropoff.lng } : null,
-        earnings: parseFloat(gross) || 0,
-        extra_cash: 0,
-        tips: parseFloat(tips) || 0,
-        tolls: parseFloat(tolls) || 0,
-        platform_fee: parseFloat(fee) || 0,
-        black_car_phones_fee: 2.75,
-        gross: grossIncome,
-        net: netPayout,
-        status: dropoff ? 'pending' : 'pending',
-        trip_notes: ref || '',
-      };
-
-      const { error } = await (supabase.from("trips") as any)
-        .insert(tripData);
-
-      if (!error) {
-        // Reset form
-        setGross('');
-        setTips('');
-        setTolls('');
-        setFee('');
-        setRef('');
-        setPickup(null);
-        setDropoff(null);
-        alert('Trip guardado exitosamente!');
-      }
-    } catch (error) {
-      console.error('Error saving trip:', error);
-    } finally {
-      setSaving(false);
-    }
+  const formatDate = () => {
+    const date = new Date();
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()} · ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
   };
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white p-4 pb-24 font-sans">
       {/* Header */}
-      <h1 className="text-xl font-bold">{getGreeting()}, Miguel.</h1>
-      <p className="text-yellow-500 text-sm">{formatDate(currentTime)} · {formatTime(currentTime)}</p>
-      <div className="flex items-center gap-2 text-gray-400 mt-1">
-        <MapPin size={14} className="text-green-400" />
-        <span className="text-sm truncate">West Granada Ave, Lindenhurst</span>
+      <div className="mb-4">
+        <h1 className="text-xl font-bold">{getGreeting()}, Miguel.</h1>
+        <p className="text-yellow-500 text-sm">{formatDate()}</p>
+        <div className="flex items-center gap-2 text-gray-400 mt-1">
+          <MapPin size={14} className="text-green-400" />
+          <span className="text-sm truncate">West Granada Ave, Lindenhurst</span>
+        </div>
       </div>
 
-      {/* Platform selector */}
-      <div className="flex gap-2 mb-4 mt-4">
+      {/* Plataforma y Break */}
+      <div className="flex gap-2 mb-4">
         <div className="flex-1 bg-[#1E293B] rounded-xl border border-gray-700 p-3 flex items-center justify-between">
           <select 
             value={platform} 
             onChange={(e) => setPlatform(e.target.value)}
-            className="bg-transparent w-full outline-none text-white font-semibold cursor-pointer"
+            className="bg-transparent w-full outline-none font-semibold text-white cursor-pointer"
           >
-            {platforms.map(p => (
-              <option key={p.id} value={p.id} className="bg-[#1E293B]">{p.name}</option>
-            ))}
+            <option value="Uber" className="bg-[#1E293B]">Uber</option>
+            <option value="Lyft" className="bg-[#1E293B]">Lyft</option>
+            <option value="Via" className="bg-[#1E293B]">Via</option>
           </select>
           <ChevronDown size={16} className="text-gray-400" />
         </div>
-        <button 
-          onClick={() => setIsBreak(!isBreak)}
-          className={`${isBreak ? 'bg-yellow-500 text-black' : 'bg-transparent border border-yellow-500 text-yellow-500'} px-4 rounded-xl flex items-center gap-2 transition-colors`}
-        >
-          <Coffee size={16} /> {isBreak ? 'Working' : 'Break'}
+        <button className="bg-transparent border border-yellow-500 text-yellow-500 px-4 rounded-xl flex items-center gap-2">
+          <Coffee size={16} /> Break
         </button>
       </div>
 
-      {/* Gross & Ref */}
+      {/* Inputs con estilo de tarjeta */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700">
           <p className="text-xs text-gray-400 mb-1">Gross fare</p>
@@ -171,7 +72,7 @@ export default function DailyEntry() {
               type="text" 
               inputMode="decimal" 
               placeholder="0.00" 
-              className="bg-transparent w-full outline-none text-xl font-bold" 
+              className="bg-transparent w-full outline-none text-lg font-bold" 
               value={gross} 
               onChange={(e) => setGross(e.target.value)} 
             />
@@ -182,30 +83,30 @@ export default function DailyEntry() {
           <input 
             type="text" 
             placeholder="opcional" 
-            className="bg-transparent w-full outline-none placeholder-gray-500 text-sm" 
+            className="bg-transparent w-full outline-none placeholder-gray-500" 
             value={ref} 
             onChange={(e) => setRef(e.target.value)} 
           />
         </div>
       </div>
 
-      {/* Pickup/Dropoff buttons */}
+      {/* Botones grandes de accion */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <button 
-          onClick={handlePickup} 
+          onClick={() => setPickup({ name: 'Residencia', city: 'Lindenhurst', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) })} 
           className="bg-green-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <MapPin size={18} /> Pickup now
         </button>
         <button 
-          onClick={handleDropoff} 
+          onClick={() => setDropoff({ name: 'Business', city: 'Copiague', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) })} 
           className="bg-blue-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <MapPin size={18} /> Dropoff now
         </button>
       </div>
 
-      {/* Pickup/Dropoff status */}
+      {/* Cajitas compactas de GPS */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className={`bg-[#1E293B] rounded-xl p-3 border flex flex-col justify-between h-[60px] overflow-hidden ${pickup ? 'border-green-500/30' : 'border-gray-700'}`}>
           <div className="flex items-center gap-1 text-green-400 font-bold text-xs">
@@ -215,7 +116,7 @@ export default function DailyEntry() {
             {pickup ? `${pickup.time} · ${pickup.city}` : "Toca Pickup"}
           </div>
         </div>
-        <div className={`bg-[#1E293B] rounded-xl p-3 border flex flex-col justify-between h-[60px] overflow-hidden ${dropoff ? 'border-blue-500/30' : 'border-gray-700'}`}>
+        <div className={`bg-[#1E293B] rounded-xl p-3 border flex flex-col justify-between h-[60px] overflow-hidden ${dropoff ? 'border-blue-500/30 border-gray-700' : 'border-gray-700'}`}>
           <div className="flex items-center gap-1 text-blue-400 font-bold text-xs">
             <MapPin size={14} /> {dropoff ? dropoff.name : "Pendiente"}
           </div>
@@ -225,7 +126,7 @@ export default function DailyEntry() {
         </div>
       </div>
 
-      {/* Tips & Toll */}
+      {/* Inputs de Tips, Toll y Fee */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700">
           <p className="text-xs text-gray-400 mb-1">Tips</p>
@@ -257,7 +158,6 @@ export default function DailyEntry() {
         </div>
       </div>
 
-      {/* Platform fee */}
       <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700 mb-6">
         <p className="text-xs text-gray-400 mb-1">Platform fee</p>
         <div className="flex items-center">
@@ -273,7 +173,7 @@ export default function DailyEntry() {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Resultados en tiempo real */}
       <div className="flex justify-between items-end mb-6 bg-[#1E293B] p-4 rounded-xl">
         <div>
           <p className="text-xs text-gray-400">Net payout</p>
@@ -287,20 +187,9 @@ export default function DailyEntry() {
         </div>
       </div>
 
-      {/* Save button */}
-      <button 
-        onClick={handleSaveTrip}
-        disabled={saving || !gross}
-        className={`w-full bg-green-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 ${saving ? 'opacity-50' : 'active:scale-95'} transition-all`}
-      >
-        {saving ? (
-          <span className="animate-spin">⟳</span>
-        ) : (
-          <Save size={20} />
-        )}
-        {saving ? 'Guardando...' : '✓ Guardar Trip'}
+      <button className="w-full bg-green-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
+        ✓ Guardar Trip
       </button>
-
       <BottomNav />
     </div>
   );
