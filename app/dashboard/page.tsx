@@ -2,6 +2,6 @@
 
 import DailyEntry from "@/components/DailyEntry";
 
-export default function HomePage() {
+export default function DashboardPage() {
   return <DailyEntry />;
 }
