@@ -58,3 +58,16 @@ export interface Schedule {
   start_time?: string;
   end_time?: string;
 }
+
+export interface Expense {
+  id: string;
+  amount: number;
+  merchant: string;
+  category: string;
+  date: string;
+  location?: string;
+  notes?: string;
+  is_business: boolean;
+  receipt_url?: string;
+  created_at: string;
+}
