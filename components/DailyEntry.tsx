@@ -1,27 +1,23 @@
-﻿"use client";
+"use client";
 
 import { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Home, MapPin, Coffee, ChevronDown } from 'lucide-react';
 import BottomNav from './BottomNav';
 
-// Cliente Supabase con variables de entorno (inicializacion perezosa: usa EXACTAMENTE tus env vars NEXT_PUBLIC_*)
-let _supabase: ReturnType<typeof createClient> | null = null;
-function getSupabase() {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-    );
-  }
-  return _supabase;
-}
+// Cliente Supabase - usa EXACTAMENTE las env vars NEXT_PUBLIC_*
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
 
 interface GPSPoint {
   name: string;
   city: string;
   time: string;
   iso: string;
+  lat: number;
+  lng: number;
 }
 
 export default function DailyEntry() {
@@ -52,6 +48,31 @@ export default function DailyEntry() {
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()} · ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
   };
 
+  // GPS real del navegador con fallback a coordenadas de la ciudad
+  const captureGPS = (fallback: { lat: number; lng: number }): Promise<{ lat: number; lng: number }> =>
+    new Promise((resolve) => {
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve(fallback),
+          { timeout: 5000 }
+        );
+      } else {
+        resolve(fallback);
+      }
+    });
+
+  const handlePickup = async () => {
+    const gps = await captureGPS({ lat: 40.6860, lng: -73.3838 }); // Lindenhurst, NY
+    const now = new Date();
+    setPickup({ name: 'Residencia', city: 'Lindenhurst', time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), iso: now.toISOString(), ...gps });
+  };
+
+  const handleDropoff = async () => {
+    const gps = await captureGPS({ lat: 40.6807, lng: -73.3982 }); // Copiague, NY
+    const now = new Date();
+    setDropoff({ name: 'Business', city: 'Copiague', time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), iso: now.toISOString(), ...gps });
+  };
   // INSERT en la tabla trips (status: pending) + limpiar el formulario
   const handleSave = async () => {
     if (!gross && !tips && !tolls) {
@@ -60,14 +81,13 @@ export default function DailyEntry() {
     }
     setSaving(true);
     try {
-      const supabase = getSupabase();
       const now = new Date().toISOString();
       const { error } = await (supabase.from('trips') as any).insert({
         platform_id: platform.toLowerCase(),
         pickup_time: pickup?.iso || now,
         dropoff_time: dropoff?.iso || null,
-        pickup_gps: null,
-        dropoff_gps: null,
+        pickup_gps: pickup ? { lat: pickup.lat, lng: pickup.lng } : null,
+        dropoff_gps: dropoff ? { lat: dropoff.lat, lng: dropoff.lng } : null,
         earnings: parseFloat(gross) || 0,
         extra_cash: 0,
         tips: parseFloat(tips) || 0,
@@ -160,13 +180,13 @@ export default function DailyEntry() {
       {/* Botones grandes de accion */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <button 
-          onClick={() => setPickup({ name: 'Residencia', city: 'Lindenhurst', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), iso: new Date().toISOString() })} 
+          onClick={handlePickup} 
           className="bg-green-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <MapPin size={18} /> Pickup now
         </button>
         <button 
-          onClick={() => setDropoff({ name: 'Business', city: 'Copiague', time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), iso: new Date().toISOString() })} 
+          onClick={handleDropoff} 
           className="bg-blue-400 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <MapPin size={18} /> Dropoff now
