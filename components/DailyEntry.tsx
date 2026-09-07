@@ -159,7 +159,7 @@ export default function DailyEntry() {
               type="text" 
               inputMode="decimal" 
               placeholder="0.00" 
-              className="bg-transparent w-full outline-none text-lg font-bold" 
+              className="bg-transparent w-full outline-none text-lg font-bold text-white placeholder-gray-500" 
               value={gross} 
               onChange={(e) => setGross(e.target.value)} 
             />
@@ -223,7 +223,7 @@ export default function DailyEntry() {
               type="text" 
               inputMode="decimal" 
               placeholder="0.00" 
-              className="bg-transparent w-full outline-none" 
+              className="bg-transparent w-full outline-none text-white placeholder-gray-500" 
               value={tips} 
               onChange={(e) => setTips(e.target.value)} 
             />
@@ -237,7 +237,7 @@ export default function DailyEntry() {
               type="text" 
               inputMode="decimal" 
               placeholder="0.00" 
-              className="bg-transparent w-full outline-none" 
+              className="bg-transparent w-full outline-none text-white placeholder-gray-500" 
               value={tolls} 
               onChange={(e) => setTolls(e.target.value)} 
             />
@@ -253,7 +253,7 @@ export default function DailyEntry() {
             type="text" 
             inputMode="decimal" 
             placeholder="0.00" 
-            className="bg-transparent w-full outline-none" 
+            className="bg-transparent w-full outline-none text-white placeholder-gray-500" 
             value={fee} 
             onChange={(e) => setFee(e.target.value)} 
           />
