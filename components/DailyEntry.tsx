@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Home, MapPin, Coffee, ChevronDown } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -19,7 +19,6 @@ export default function DailyEntry() {
 
   const handlePickup = () => { setPickup({ name: 'Residencia', city: 'Lindenhurst', time: '4:43 PM' }); };
   const handleDropoff = () => { setDropoff({ name: 'Business', city: 'Copiague', time: '5:12 PM' }); };
-
   const handleSave = async () => {
     await supabase.from('trips').insert({
       platform_id: platform,
@@ -38,8 +37,8 @@ export default function DailyEntry() {
   return (
     <div className="min-h-screen bg-[#0F172A] text-white p-4 pb-24 font-sans">
       <div className="mb-4">
-        <h1 className="text-xl font-bold">Good evening, Miguel.</h1>
-        <p className="text-yellow-500 text-sm">Sun, Sep 6 · 11:44 PM</p>
+        <h1 className="text-xl font-bold">Good morning, Miguel.</h1>
+        <p className="text-yellow-500 text-sm">Sun, Sep 6 · 7:44 AM</p>
         <div className="flex items-center gap-2 text-gray-400 mt-1">
           <MapPin size={14} className="text-green-400" />
           <span className="text-sm truncate">West Granada Ave, Lindenhurst</span>
@@ -76,6 +75,10 @@ export default function DailyEntry() {
         </button>
       </div>
 
+
+
+
+
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-[#1E293B] rounded-xl p-3 border border-green-500/30 flex flex-col justify-between h-[60px] overflow-hidden">
           <div className="flex items-center gap-1 text-green-400 font-bold text-xs"><Home size={14} /> {pickup ? pickup.name : "Pendiente"}</div>
@@ -106,11 +109,11 @@ export default function DailyEntry() {
       <div className="flex justify-between items-end mb-6 bg-[#1E293B] p-4 rounded-xl">
         <div>
           <p className="text-xs text-gray-400">Net payout</p>
-          <p className="text-3xl font-bold text-green-400">${((parseFloat(gross)||0) + (parseFloat(tips)||0) + (parseFloat(tolls)||0) - (parseFloat(fee)||0)).toFixed(2)}</p>
+          <p className="text-3xl font-bold text-green-400">${((parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0) - (parseFloat(fee) || 0)).toFixed(2)}</p>
         </div>
         <div className="bg-white text-black p-3 rounded-xl text-right">
           <p className="text-xs text-gray-600">Gross income</p>
-          <p className="text-2xl font-bold">${((parseFloat(gross)||0) + (parseFloat(tips)||0) + (parseFloat(tolls)||0)).toFixed(2)}</p>
+          <p className="text-2xl font-bold">${((parseFloat(gross) || 0) + (parseFloat(tips) || 0) + (parseFloat(tolls) || 0)).toFixed(2)}</p>
         </div>
       </div>
 
@@ -120,3 +123,4 @@ export default function DailyEntry() {
     </div>
   );
 }
+
