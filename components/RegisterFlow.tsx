@@ -1,57 +1,596 @@
-﻿"use client";
+"use client";
 
-import { ArrowDown, Pencil } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Clock, 
+  CheckCircle2, 
+  BookOpen, 
+  Trash2, 
+  Pencil, 
+  MapPin, 
+  DollarSign, 
+  Car, 
+  ArrowRight, 
+  RefreshCw, 
+  Plus, 
+  X, 
+  Check, 
+  AlertCircle,
+  TrendingUp
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
+import Link from 'next/link';
 
-export default function Register() {
+interface LocationInfo {
+  name?: string;
+  city?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+}
+
+interface TripItem {
+  id: string;
+  platform_id: string;
+  pickup_time: string | null;
+  dropoff_time: string | null;
+  pickup_gps: LocationInfo | null;
+  dropoff_gps: LocationInfo | null;
+  earnings: number;
+  tips: number;
+  tolls: number;
+  platform_fee: number;
+  gross: number;
+  net: number;
+  net_payout: number;
+  status: 'pending' | 'reconciled' | 'in_ledger' | string;
+  trip_notes: string;
+  created_at: string;
+}
+
+export default function RegisterFlow() {
+  const [trips, setTrips] = useState<TripItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'reconciled' | 'in_ledger'>('all');
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Modal de edición
+  const [editingTrip, setEditingTrip] = useState<TripItem | null>(null);
+  const [editGross, setEditGross] = useState('');
+  const [editTips, setEditTips] = useState('');
+  const [editTolls, setEditTolls] = useState('');
+  const [editFee, setEditFee] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const fetchTrips = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('trips')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTrips((data as TripItem[]) || []);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al cargar viajes';
+      showToast(msg, 'error');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchTrips();
+  };
+
+  const handleUpdateStatus = async (id: string, newStatus: 'reconciled' | 'in_ledger' | 'pending') => {
+    try {
+      const { error } = await supabase
+        .from('trips')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTrips(prev =>
+        prev.map(t => (t.id === id ? { ...t, status: newStatus } : t))
+      );
+
+      const statusLabels = {
+        reconciled: 'Viaje marcado como Reconciliado',
+        in_ledger: 'Viaje movido al Ledger',
+        pending: 'Viaje devuelto a Pendiente'
+      };
+      showToast(statusLabels[newStatus] || 'Estado actualizado');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al cambiar estado';
+      showToast(msg, 'error');
+    }
+  };
+
+  const handleDeleteTrip = async (id: string) => {
+    if (!window.confirm('¿Seguro que deseas eliminar este viaje?')) return;
+
+    try {
+      const { error } = await supabase.from('trips').delete().eq('id', id);
+      if (error) throw error;
+
+      setTrips(prev => prev.filter(t => t.id !== id));
+      showToast('Viaje eliminado');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al eliminar';
+      showToast(msg, 'error');
+    }
+  };
+
+  const openEditModal = (trip: TripItem) => {
+    setEditingTrip(trip);
+    setEditGross(trip.earnings ? trip.earnings.toString() : '');
+    setEditTips(trip.tips ? trip.tips.toString() : '');
+    setEditTolls(trip.tolls ? trip.tolls.toString() : '');
+    setEditFee(trip.platform_fee ? trip.platform_fee.toString() : '');
+    setEditNotes(trip.trip_notes || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTrip) return;
+    setSavingEdit(true);
+
+    const grossNum = parseFloat(editGross) || 0;
+    const tipsNum = parseFloat(editTips) || 0;
+    const tollsNum = parseFloat(editTolls) || 0;
+    const feeNum = parseFloat(editFee) || 0;
+    const grossTotal = grossNum + tipsNum + tollsNum;
+    const netPayout = grossTotal - feeNum;
+
+    try {
+      const { error } = await supabase
+        .from('trips')
+        .update({
+          earnings: grossNum,
+          tips: tipsNum,
+          tolls: tollsNum,
+          platform_fee: feeNum,
+          gross: grossTotal,
+          net: netPayout,
+          net_payout: netPayout,
+          trip_notes: editNotes
+        })
+        .eq('id', editingTrip.id);
+
+      if (error) throw error;
+
+      setTrips(prev =>
+        prev.map(t =>
+          t.id === editingTrip.id
+            ? {
+                ...t,
+                earnings: grossNum,
+                tips: tipsNum,
+                tolls: tollsNum,
+                platform_fee: feeNum,
+                gross: grossTotal,
+                net: netPayout,
+                net_payout: netPayout,
+                trip_notes: editNotes
+              }
+            : t
+        )
+      );
+
+      setEditingTrip(null);
+      showToast('Viaje actualizado');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al actualizar';
+      showToast(msg, 'error');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const filteredTrips = trips.filter(t => {
+    if (filter === 'all') return true;
+    const normStatus = (t.status || 'pending').toLowerCase();
+    if (filter === 'pending') return normStatus === 'pending';
+    if (filter === 'reconciled') return normStatus === 'reconciled';
+    if (filter === 'in_ledger') return normStatus === 'in_ledger' || normStatus === 'en_ledger';
+    return true;
+  });
+
+  const totalGross = trips.reduce((sum, t) => sum + (Number(t.gross) || 0), 0);
+  const totalNet = trips.reduce((sum, t) => sum + (Number(t.net_payout || t.net) || 0), 0);
+  const pendingCount = trips.filter(t => (t.status || 'pending').toLowerCase() === 'pending').length;
+  const reconciledCount = trips.filter(t => (t.status || '').toLowerCase() === 'reconciled').length;
+  const ledgerCount = trips.filter(t => ['in_ledger', 'en_ledger'].includes((t.status || '').toLowerCase())).length;
+
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white p-6 pb-24 font-sans">
-      <h1 className="text-2xl font-bold mb-6">Flujo despues de guardar</h1>
-
-      {/* Pendiente */}
-      <div className="bg-[#1E293B] rounded-2xl p-5 border border-yellow-500/40 mb-4">
-        <div className="flex justify-between items-start">
-          <h2 className="text-xl font-bold">Uber · #67</h2>
-          <span className="bg-yellow-500/20 text-yellow-500 text-xs px-3 py-1 rounded-full font-bold">Pendiente</span>
+    <div className="min-h-screen bg-[#0F172A] text-white p-4 pb-28 font-sans">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed top-4 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl font-bold z-50 shadow-lg text-sm flex items-center gap-2 ${
+            toast.type === 'success' ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
+          }`}
+        >
+          {toast.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
+          {toast.text}
         </div>
-        <p className="text-gray-400 mt-2">Residencia · Lindenhurst → Business · Copiague</p>
-        <p className="text-green-400 font-bold mt-2">$34.55 <span className="text-green-500/60 font-normal">net (capturado)</span></p>
-        <button className="mt-4 text-xs text-gray-400 flex items-center gap-1 hover:text-white transition-colors">
-          <Pencil size={12} /> Editar
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Registro de Viajes</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Flujo: Captura → Reconciliación → Ledger</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="p-2.5 bg-[#1E293B] border border-gray-700 rounded-xl hover:border-gray-500 transition-colors active:scale-95"
+          title="Recargar viajes"
+        >
+          <RefreshCw size={18} className={`text-gray-300 ${refreshing ? 'animate-spin text-green-400' : ''}`} />
         </button>
       </div>
 
-      <div className="flex flex-col items-center mb-4">
-        <ArrowDown className="text-gray-500" />
-        <p className="text-xs text-gray-500 mt-2">Llega el statement de Uber</p>
-      </div>
-
-      {/* Reconciliada */}
-      <div className="bg-[#1E293B] rounded-2xl p-5 border border-green-500/40 mb-4">
-        <div className="flex justify-between items-start">
-          <h2 className="text-xl font-bold">Uber · #67</h2>
-          <span className="bg-green-500/20 text-green-500 text-xs px-3 py-1 rounded-full font-bold">Reconciliada</span>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-[#1E293B] rounded-2xl p-4 border border-gray-700">
+          <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+            <DollarSign size={14} className="text-green-400" /> Total Neto ({trips.length} viajes)
+          </p>
+          <p className="text-2xl font-bold text-green-400">${totalNet.toFixed(2)}</p>
+          <p className="text-[11px] text-gray-400 mt-1">Gross: ${totalGross.toFixed(2)}</p>
         </div>
-        <p className="text-gray-400 mt-2">Residencia · Lindenhurst → Business · Copiague</p>
-        <p className="text-green-400 font-bold mt-2">$34.55 <span className="text-green-500/60 font-normal">net (confirmado)</span></p>
-      </div>
 
-      <div className="flex flex-col items-center mb-4">
-        <ArrowDown className="text-gray-500" />
-        <p className="text-xs text-gray-500 mt-2">Pasa automaticamente al Ledger</p>
-      </div>
-
-      {/* En Ledger */}
-      <div className="bg-[#1E293B] rounded-2xl p-5 border border-blue-500/40">
-        <div className="flex justify-between items-start">
-          <h2 className="text-xl font-bold">Ledger · Uber #67</h2>
-          <span className="bg-blue-500/20 text-blue-500 text-xs px-3 py-1 rounded-full font-bold">En Ledger</span>
+        <div className="bg-[#1E293B] rounded-2xl p-4 border border-gray-700 flex flex-col justify-between">
+          <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+            <TrendingUp size={14} className="text-blue-400" /> Estados
+          </p>
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span className="text-yellow-500 font-medium">Pendientes:</span>
+              <span className="font-bold">{pendingCount}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-400 font-medium">Reconciliados:</span>
+              <span className="font-bold">{reconciledCount}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-blue-400 font-medium">En Ledger:</span>
+              <span className="font-bold">{ledgerCount}</span>
+            </div>
+          </div>
         </div>
-        <p className="text-gray-400 mt-2">Toda la data GPS + financiera preservada</p>
-        <p className="text-blue-400 font-bold mt-2">Listo para reportes / impuestos</p>
       </div>
 
+      {/* Status Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+            filter === 'all'
+              ? 'bg-green-400 text-black font-bold'
+              : 'bg-[#1E293B] text-gray-400 border border-gray-700 hover:border-gray-600'
+          }`}
+        >
+          Todos ({trips.length})
+        </button>
+        <button
+          onClick={() => setFilter('pending')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+            filter === 'pending'
+              ? 'bg-yellow-500 text-black font-bold'
+              : 'bg-[#1E293B] text-gray-400 border border-gray-700 hover:border-gray-600'
+          }`}
+        >
+          Pendientes ({pendingCount})
+        </button>
+        <button
+          onClick={() => setFilter('reconciled')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+            filter === 'reconciled'
+              ? 'bg-green-500 text-black font-bold'
+              : 'bg-[#1E293B] text-gray-400 border border-gray-700 hover:border-gray-600'
+          }`}
+        >
+          Reconciliados ({reconciledCount})
+        </button>
+        <button
+          onClick={() => setFilter('in_ledger')}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+            filter === 'in_ledger'
+              ? 'bg-blue-500 text-white font-bold'
+              : 'bg-[#1E293B] text-gray-400 border border-gray-700 hover:border-gray-600'
+          }`}
+        >
+          En Ledger ({ledgerCount})
+        </button>
+      </div>
+
+      {/* Trips List */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+          <RefreshCw size={28} className="animate-spin text-green-400 mb-3" />
+          <p className="text-sm">Cargando viajes desde Supabase...</p>
+        </div>
+      ) : filteredTrips.length === 0 ? (
+        <div className="bg-[#1E293B] rounded-2xl p-8 border border-gray-700 text-center my-6">
+          <Car size={36} className="text-gray-500 mx-auto mb-3" />
+          <h3 className="font-bold text-lg mb-1">No hay viajes en esta sección</h3>
+          <p className="text-xs text-gray-400 mb-4 max-w-xs mx-auto">
+            {filter === 'all'
+              ? 'Aún no has registrado ningún viaje. Puedes guardar tu primer trip desde la pantalla de Inicio.'
+              : `No tienes viajes con estado "${filter}".`}
+          </p>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 bg-green-400 text-black font-bold px-4 py-2.5 rounded-xl text-sm hover:bg-green-300 transition-colors"
+          >
+            <Plus size={16} /> Capturar nuevo viaje
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredTrips.map(trip => {
+            const normStatus = (trip.status || 'pending').toLowerCase();
+            const isPending = normStatus === 'pending';
+            const isReconciled = normStatus === 'reconciled';
+            const isLedger = normStatus === 'in_ledger' || normStatus === 'en_ledger';
+
+            const pickupLabel = trip.pickup_gps?.name || trip.pickup_gps?.city || 'Origen no especificado';
+            const dropoffLabel = trip.dropoff_gps?.name || trip.dropoff_gps?.city || 'Destino no especificado';
+            const createdDate = new Date(trip.created_at).toLocaleDateString('es-US', {
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit'
+            });
+
+            const netVal = Number(trip.net_payout || trip.net || 0);
+            const grossVal = Number(trip.gross || trip.earnings || 0);
+
+            return (
+              <div
+                key={trip.id}
+                className={`bg-[#1E293B] rounded-2xl p-4 border transition-all ${
+                  isPending
+                    ? 'border-yellow-500/40 hover:border-yellow-500/70'
+                    : isReconciled
+                    ? 'border-green-500/40 hover:border-green-500/70'
+                    : 'border-blue-500/40 hover:border-blue-500/70'
+                }`}
+              >
+                {/* Header card: Platform & Status */}
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="capitalize font-bold text-base tracking-wide text-white">
+                      {trip.platform_id || 'Viaje'}
+                    </span>
+                    <span className="text-[11px] text-gray-500">· {createdDate}</span>
+                  </div>
+
+                  {isPending && (
+                    <span className="bg-yellow-500/20 text-yellow-500 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                      <Clock size={12} /> Pendiente
+                    </span>
+                  )}
+                  {isReconciled && (
+                    <span className="bg-green-500/20 text-green-400 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Reconciliada
+                    </span>
+                  )}
+                  {isLedger && (
+                    <span className="bg-blue-500/20 text-blue-400 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                      <BookOpen size={12} /> En Ledger
+                    </span>
+                  )}
+                </div>
+
+                {/* Route */}
+                <div className="flex items-center gap-1.5 text-xs text-gray-300 mb-2 truncate">
+                  <MapPin size={13} className="text-green-400 shrink-0" />
+                  <span className="truncate">{pickupLabel}</span>
+                  <ArrowRight size={12} className="text-gray-500 shrink-0 mx-0.5" />
+                  <span className="truncate">{dropoffLabel}</span>
+                </div>
+
+                {/* Financial Details */}
+                <div className="flex justify-between items-end border-t border-gray-700/50 pt-2 mb-3">
+                  <div>
+                    <span className="text-2xl font-bold text-green-400">${netVal.toFixed(2)}</span>
+                    <span className="text-[11px] text-gray-400 ml-1.5">Net Payout</span>
+                  </div>
+                  <div className="text-right text-xs text-gray-400">
+                    <p>Gross: ${grossVal.toFixed(2)}</p>
+                    {trip.tips > 0 && <p className="text-green-400/80">Tips: +${Number(trip.tips).toFixed(2)}</p>}
+                    {trip.tolls > 0 && <p className="text-sky-400/80">Tolls: +${Number(trip.tolls).toFixed(2)}</p>}
+                    {trip.platform_fee > 0 && <p className="text-red-400/80">Fee: -${Number(trip.platform_fee).toFixed(2)}</p>}
+                  </div>
+                </div>
+
+                {trip.trip_notes && (
+                  <p className="text-[11px] text-gray-400 italic mb-3 bg-[#0F172A]/50 px-2.5 py-1.5 rounded-lg">
+                    {trip.trip_notes}
+                  </p>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-700/40">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(trip)}
+                      className="text-xs text-gray-400 hover:text-white flex items-center gap-1 p-1 rounded transition-colors"
+                      title="Editar viaje"
+                    >
+                      <Pencil size={13} /> Editar
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTrip(trip.id)}
+                      className="text-xs text-red-400/70 hover:text-red-400 flex items-center gap-1 p-1 rounded transition-colors"
+                      title="Eliminar viaje"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+
+                  {/* Flow progression buttons */}
+                  <div className="flex items-center gap-2">
+                    {isPending && (
+                      <button
+                        onClick={() => handleUpdateStatus(trip.id, 'reconciled')}
+                        className="bg-green-500/20 hover:bg-green-500/30 text-green-400 font-semibold text-xs px-3 py-1.5 rounded-xl border border-green-500/30 flex items-center gap-1 transition-colors"
+                      >
+                        <Check size={13} /> Reconciliar
+                      </button>
+                    )}
+
+                    {isReconciled && (
+                      <>
+                        <button
+                          onClick={() => handleUpdateStatus(trip.id, 'pending')}
+                          className="text-[11px] text-gray-400 hover:text-gray-300"
+                        >
+                          Devolver
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(trip.id, 'in_ledger')}
+                          className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-semibold text-xs px-3 py-1.5 rounded-xl border border-blue-500/30 flex items-center gap-1 transition-colors"
+                        >
+                          <BookOpen size={13} /> A Ledger
+                        </button>
+                      </>
+                    )}
+
+                    {isLedger && (
+                      <button
+                        onClick={() => handleUpdateStatus(trip.id, 'reconciled')}
+                        className="text-[11px] text-gray-400 hover:text-gray-300"
+                      >
+                        Deshacer Ledger
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Edit Trip Modal */}
+      {editingTrip && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1E293B] rounded-2xl p-5 w-full max-w-sm border border-gray-700 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <Pencil size={18} className="text-green-400" /> Editar Viaje
+              </h3>
+              <button onClick={() => setEditingTrip(null)} className="text-gray-400 hover:text-white p-1">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Gross fare</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={editGross}
+                  onChange={e => setEditGross(e.target.value)}
+                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white font-bold outline-none focus:border-green-400"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Propinas (Tips)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={editTips}
+                    onChange={e => setEditTips(e.target.value)}
+                    className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Peajes (Tolls)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={editTolls}
+                    onChange={e => setEditTolls(e.target.value)}
+                    className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Platform Fee</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={editFee}
+                  onChange={e => setEditFee(e.target.value)}
+                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Notas / Ref</label>
+                <input
+                  type="text"
+                  value={editNotes}
+                  onChange={e => setEditNotes(e.target.value)}
+                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-green-400"
+                  placeholder="Referencia o detalles..."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingTrip(null)}
+                className="flex-1 bg-transparent border border-gray-700 text-gray-300 py-3 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={savingEdit}
+                className="flex-1 bg-green-400 text-black py-3 rounded-xl font-bold text-sm hover:bg-green-300 transition-colors flex items-center justify-center gap-1"
+              >
+                {savingEdit ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Navigation */}
       <BottomNav />
     </div>
   );
 }
+
