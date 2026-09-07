@@ -1,4 +1,4 @@
-import { Home, ClipboardList, Receipt, ShieldCheck, BarChart3 } from 'lucide-react';
+﻿import { Home, ClipboardList, Receipt, ShieldCheck, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -13,19 +13,19 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0F172A]/95 backdrop-blur border-t border-gray-800 flex justify-around items-center py-2 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0F172A]/95 backdrop-blur-md border-t border-slate-800/80 flex justify-around items-center py-2 z-40 px-2">
       {items.map((item) => {
         const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
         return (
           <Link 
             key={item.href} 
             href={item.href} 
-            className={`flex flex-col items-center gap-1 flex-1 py-1 transition-colors ${
-              isActive ? 'text-green-400 font-bold' : 'text-gray-400 hover:text-gray-200'
+            className={`flex flex-col items-center gap-1 flex-1 py-1.5 rounded-xl transition-all ${
+              isActive ? 'text-emerald-400 font-bold bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }`}
           >
             <item.icon size={20} />
-            <span className="text-[10px] tracking-wide">{item.label}</span>
+            <span className="text-[10px] tracking-wide font-medium">{item.label}</span>
           </Link>
         );
       })}
@@ -34,4 +34,3 @@ export function BottomNav() {
 }
 
 export default BottomNav;
-

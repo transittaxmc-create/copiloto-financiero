@@ -1,6 +1,7 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
+import ResponsiveDeviceShell from "@/components/ResponsiveDeviceShell";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -36,10 +37,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <html lang="es" className={`${spaceGrotesk.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen bg-[#0F172A] text-[#F8FAFC] font-sans antialiased">
-        <main className="pb-24">
+      <body className="min-h-screen bg-[#0F172A] text-[#F8FAFC] font-sans antialiased overflow-x-hidden">
+        <ResponsiveDeviceShell>
           {children}
-        </main>
+        </ResponsiveDeviceShell>
       </body>
     </html>
   );

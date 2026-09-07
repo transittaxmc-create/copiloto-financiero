@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
-import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 
@@ -175,43 +175,54 @@ export default function DailyEntry() {
   const netPayout = grossIncome - feeVal;
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white p-4 pb-24 font-sans">
+    <div className="w-full max-w-md mx-auto p-4 pb-24 font-sans space-y-4">
       {/* Feedback Toast */}
       {feedback && (
         <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl font-bold z-50 shadow-lg text-sm flex items-center gap-2 ${
-            feedback.type === 'success' ? 'bg-green-500 text-black' : 'bg-red-500 text-white'
+          className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl font-bold z-50 shadow-2xl text-xs flex items-center gap-2 max-w-[90%] transition-all ${
+            feedback.type === 'success' ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/30' : 'bg-red-500 text-white shadow-red-500/30'
           }`}
         >
-          {feedback.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
-          {feedback.text}
+          {feedback.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
+          <span>{feedback.text}</span>
         </div>
       )}
 
-      {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-xl font-bold">{greeting}, Miguel.</h1>
-        <p className="text-yellow-500 text-sm">{formattedDate} · {formattedTime}</p>
-        <div className="flex items-center gap-2 text-gray-400 mt-1">
-          <MapPin size={14} className="text-green-400 shrink-0" />
-          <span className="text-sm truncate">{currentAddress}</span>
+      {/* Header con Saludo y GPS */}
+      <div className="space-y-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-slate-100 tracking-tight">{greeting}, Miguel.</h1>
+            <p className="text-amber-400 text-xs font-semibold mt-0.5">{formattedDate} · {formattedTime}</p>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-sm shadow-inner">
+            M
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-slate-300 bg-slate-800/70 border border-slate-700/60 rounded-xl px-3 py-2 text-xs shadow-sm">
+          <MapPin size={14} className="text-emerald-400 shrink-0" />
+          <span className="truncate font-medium">{currentAddress}</span>
         </div>
       </div>
 
-      {/* Platform & Break */}
-      <div className="relative flex gap-2 mb-4">
+      {/* Selector de Plataforma & Modo Break */}
+      <div className="flex gap-2">
         <div className="flex-1 relative">
           <button
             type="button"
             onClick={() => setShowPlatforms(!showPlatforms)}
-            className="w-full bg-[#1E293B] rounded-xl border border-gray-700 p-3 flex items-center justify-between hover:border-gray-500 transition-colors"
+            className="w-full bg-[#1E293B] rounded-xl border border-slate-700/80 p-3 flex items-center justify-between hover:border-slate-500 transition-colors shadow-sm"
           >
-            <span className="font-semibold">{platform}</span>
-            <ChevronDown size={16} className={`text-gray-400 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">Plataforma:</span>
+              <span className="font-semibold text-sm text-slate-100">{platform}</span>
+            </div>
+            <ChevronDown size={16} className={`text-slate-400 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
           </button>
 
           {showPlatforms && (
-            <div className="absolute top-full mt-1 left-0 right-0 bg-[#1E293B] border border-gray-700 rounded-xl overflow-hidden z-20 shadow-xl">
+            <div className="absolute top-full mt-1.5 left-0 right-0 bg-[#1E293B] border border-slate-700 rounded-xl overflow-hidden z-30 shadow-2xl">
               {PLATFORMS.map((p) => (
                 <button
                   key={p}
@@ -220,11 +231,12 @@ export default function DailyEntry() {
                     setPlatform(p);
                     setShowPlatforms(false);
                   }}
-                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#334155] transition-colors ${
-                    platform === p ? 'text-green-400 font-bold bg-[#334155]/50' : 'text-gray-300'
+                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#334155] transition-colors flex items-center justify-between ${
+                    platform === p ? 'text-emerald-400 font-bold bg-[#334155]/60' : 'text-slate-300'
                   }`}
                 >
-                  {p}
+                  <span>{p}</span>
+                  {platform === p && <Check size={14} className="text-emerald-400" />}
                 </button>
               ))}
             </div>
@@ -234,149 +246,170 @@ export default function DailyEntry() {
         <button
           type="button"
           onClick={() => setOnBreak(!onBreak)}
-          className={`px-4 rounded-xl flex items-center gap-2 border transition-colors ${
+          className={`px-3.5 rounded-xl flex items-center gap-1.5 border text-xs font-semibold transition-all shadow-sm ${
             onBreak
-              ? 'bg-yellow-500 text-black border-yellow-500 font-bold'
-              : 'bg-transparent border-yellow-500 text-yellow-500'
+              ? 'bg-amber-500 text-slate-950 border-amber-500 font-bold shadow-amber-500/20'
+              : 'bg-slate-800/60 border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
           }`}
         >
-          <Coffee size={16} /> {onBreak ? 'En pausa' : 'Break'}
+          <Coffee size={15} />
+          <span>{onBreak ? 'En pausa' : 'Break'}</span>
         </button>
       </div>
 
-      {/* Gross Fare & Ref */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700">
-          <p className="text-xs text-gray-400 mb-1">Gross fare</p>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
-            className="bg-transparent w-full outline-none font-semibold text-lg"
-            value={gross}
-            onChange={(e) => setGross(e.target.value)}
-          />
+      {/* Entradas Financieras: Gross Fare & Ref */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="bg-[#1E293B] rounded-2xl p-3 border border-slate-700/80 focus-within:border-emerald-500/60 transition-colors shadow-sm">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 mb-1">Gross fare</p>
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400 font-bold text-base">$</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              className="bg-transparent w-full outline-none font-bold text-lg text-slate-100 placeholder-slate-600"
+              value={gross}
+              onChange={(e) => setGross(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700">
-          <p className="text-xs text-gray-400 mb-1">Ref / Invoice</p>
+
+        <div className="bg-[#1E293B] rounded-2xl p-3 border border-slate-700/80 focus-within:border-emerald-500/60 transition-colors shadow-sm">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 mb-1">Ref / Invoice</p>
           <input
             type="text"
             placeholder="opcional"
-            className="bg-transparent w-full outline-none placeholder-gray-500 text-sm pt-1"
+            className="bg-transparent w-full outline-none placeholder-slate-600 text-sm font-medium text-slate-100 pt-1.5"
             value={ref}
             onChange={(e) => setRef(e.target.value)}
           />
         </div>
       </div>
 
-      {/* GPS Pickup / Dropoff buttons */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      {/* Botones GPS de Gran Visibilidad (Pickup / Dropoff) */}
+      <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
           onClick={() => captureLocation('pickup')}
           disabled={isLocatingPickup}
-          className="bg-green-400 hover:bg-green-300 active:scale-[0.98] transition-transform text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2"
+          className="bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-slate-950 font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all"
         >
-          {isLocatingPickup ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
-          Pickup now
+          {isLocatingPickup ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} className="fill-current" />}
+          <span className="text-xs uppercase tracking-wide">Pickup now</span>
         </button>
+
         <button
           type="button"
           onClick={() => captureLocation('dropoff')}
           disabled={isLocatingDropoff}
-          className="bg-blue-400 hover:bg-blue-300 active:scale-[0.98] transition-transform text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2"
+          className="bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-300 hover:to-sky-400 text-slate-950 font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 active:scale-[0.98] transition-all"
         >
-          {isLocatingDropoff ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
-          Dropoff now
+          {isLocatingDropoff ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} className="fill-current" />}
+          <span className="text-xs uppercase tracking-wide">Dropoff now</span>
         </button>
       </div>
 
-      {/* Location indicators */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-[#1E293B] rounded-xl p-3 border border-green-500/30 flex flex-col justify-between h-[64px] overflow-hidden">
-          <div className="flex items-center gap-1 text-green-400 font-bold text-xs truncate">
-            <Home size={14} className="shrink-0" /> {pickup ? pickup.name : 'Pendiente'}
+      {/* Tarjetas Indicadoras de Ubicación */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between min-h-[66px] shadow-sm ${
+          pickup ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-700/80'
+        }`}>
+          <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs truncate">
+            <Home size={13} className="shrink-0" />
+            <span className="truncate">{pickup ? pickup.name : 'Pickup Pendiente'}</span>
           </div>
-          <div className="text-xs text-gray-300 truncate">
-            {pickup ? `${pickup.time} · ${pickup.city}` : 'Toca Pickup'}
+          <div className="text-[11px] text-slate-400 truncate mt-1">
+            {pickup ? `${pickup.time} · ${pickup.city}` : 'Toca el botón verde'}
           </div>
         </div>
 
-        <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700 flex flex-col justify-between h-[64px] overflow-hidden">
-          <div className="flex items-center gap-1 text-gray-400 font-bold text-xs truncate">
-            <MapPin size={14} className="shrink-0" /> {dropoff ? dropoff.name : 'Pendiente'}
+        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between min-h-[66px] shadow-sm ${
+          dropoff ? 'border-sky-500/40 bg-sky-500/5' : 'border-slate-700/80'
+        }`}>
+          <div className="flex items-center gap-1 text-sky-400 font-bold text-xs truncate">
+            <MapPin size={13} className="shrink-0" />
+            <span className="truncate">{dropoff ? dropoff.name : 'Destino Pendiente'}</span>
           </div>
-          <div className="text-xs text-gray-400 truncate">
-            {dropoff ? `${dropoff.time} · ${dropoff.city}` : 'Toca dropoff'}
+          <div className="text-[11px] text-slate-400 truncate mt-1">
+            {dropoff ? `${dropoff.time} · ${dropoff.city}` : 'Toca el botón azul'}
           </div>
         </div>
       </div>
 
       {/* Tips & Toll */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700">
-          <p className="text-xs text-gray-400 mb-1">Tips</p>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
-            className="bg-transparent w-full outline-none font-semibold"
-            value={tips}
-            onChange={(e) => setTips(e.target.value)}
-          />
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="bg-[#1E293B] rounded-2xl p-3 border border-slate-700/80 focus-within:border-emerald-500/60 transition-colors shadow-sm">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 mb-1">Tips</p>
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400 font-bold text-sm">$</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              className="bg-transparent w-full outline-none font-semibold text-slate-100 placeholder-slate-600 text-base"
+              value={tips}
+              onChange={(e) => setTips(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700">
-          <p className="text-xs text-gray-400 mb-1">Toll</p>
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
-            className="bg-transparent w-full outline-none font-semibold"
-            value={tolls}
-            onChange={(e) => setTolls(e.target.value)}
-          />
+
+        <div className="bg-[#1E293B] rounded-2xl p-3 border border-slate-700/80 focus-within:border-emerald-500/60 transition-colors shadow-sm">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 mb-1">Toll (Peajes)</p>
+          <div className="flex items-center gap-1">
+            <span className="text-slate-400 font-bold text-sm">$</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              className="bg-transparent w-full outline-none font-semibold text-slate-100 placeholder-slate-600 text-base"
+              value={tolls}
+              onChange={(e) => setTolls(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
       {/* Platform fee */}
-      <div className="bg-[#1E293B] rounded-xl p-3 border border-gray-700 mb-6">
-        <p className="text-xs text-gray-400 mb-1">Platform fee</p>
-        <input
-          type="text"
-          inputMode="decimal"
-          placeholder="0.00"
-          className="bg-transparent w-full outline-none font-semibold"
-          value={fee}
-          onChange={(e) => setFee(e.target.value)}
-        />
+      <div className="bg-[#1E293B] rounded-2xl p-3 border border-slate-700/80 focus-within:border-emerald-500/60 transition-colors shadow-sm">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 mb-1">Platform fee (Comisión App)</p>
+        <div className="flex items-center gap-1">
+          <span className="text-slate-400 font-bold text-sm">$</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="0.00"
+            className="bg-transparent w-full outline-none font-semibold text-slate-100 placeholder-slate-600 text-base"
+            value={fee}
+            onChange={(e) => setFee(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* Totals Banner */}
-      <div className="flex justify-between items-end mb-6 bg-[#1E293B] p-4 rounded-xl border border-gray-700/50">
+      {/* Banner de Totales en Tiempo Real */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/80 p-4 rounded-2xl shadow-xl flex justify-between items-center">
         <div>
-          <p className="text-xs text-gray-400">Net payout</p>
-          <p className="text-3xl font-bold text-green-400">${netPayout.toFixed(2)}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Net payout</p>
+          <p className="text-3xl font-extrabold text-emerald-400 tracking-tight mt-0.5">${netPayout.toFixed(2)}</p>
         </div>
-        <div className="bg-white text-black p-3 rounded-xl text-right">
-          <p className="text-xs text-gray-600">Gross income</p>
-          <p className="text-2xl font-bold">${grossIncome.toFixed(2)}</p>
+        <div className="bg-white/95 text-slate-900 px-4 py-2.5 rounded-xl text-right shadow-md">
+          <p className="text-[10px] uppercase font-bold tracking-wider text-slate-600">Gross income</p>
+          <p className="text-xl font-black text-slate-950 tracking-tight">${grossIncome.toFixed(2)}</p>
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* Botón Principal: Guardar Trip */}
       <button
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="w-full bg-green-400 hover:bg-green-300 active:scale-[0.98] transition-all text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2"
+        className="w-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold py-4 rounded-2xl shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
       >
-        {saving ? <Loader2 size={18} className="animate-spin" /> : '✓'}
-        {saving ? 'Guardando...' : 'Guardar Trip'}
+        {saving ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} className="stroke-[3]" />}
+        <span>{saving ? 'Guardando en Supabase...' : 'Guardar Trip'}</span>
       </button>
 
-      {/* Bottom Navigation */}
+      {/* Barra de Navegación PWA */}
       <BottomNav />
     </div>
   );
 }
-
