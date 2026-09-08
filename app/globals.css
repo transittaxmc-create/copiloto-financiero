@@ -1,3 +1,9 @@
+/*
+ * Pipeline Tailwind: postcss.config.js (tailwindcss + autoprefixer).
+ * NOTA de build: cambiar postcss.config.js NO invalida la caché del módulo
+ * CSS en Vercel/Next — tocar este archivo sí fuerza el reprocesado.
+ * (Fix 2026-09-07: producción servía CSS sin utilidades por caché stale.)
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
