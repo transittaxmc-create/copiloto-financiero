@@ -177,6 +177,7 @@ export default function DailyEntry() {
       const msg = err instanceof Error ? err.message : 'Error desconocido al guardar';
       console.error('Error en handleSave:', err);
       setFeedback({ text: `Error al guardar: ${msg}`, type: 'error' });
+      alert(`Error al guardar: ${msg}\n\nRevisa la consola del navegador (F12) para más detalles.`);
       setTimeout(() => setFeedback(null), 4000);
     } finally {
       setSaving(false);

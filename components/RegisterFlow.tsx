@@ -224,6 +224,7 @@ export default function RegisterFlow() {
       const msg = err instanceof Error ? err.message : 'Error al actualizar';
       console.error('Error en handleSaveEdit:', err);
       showToast(`Error: ${msg}`, 'error');
+      alert(`Error al guardar: ${msg}\n\nRevisa la consola del navegador (F12) para más detalles.`);
     } finally {
       setSavingEdit(false);
     }
