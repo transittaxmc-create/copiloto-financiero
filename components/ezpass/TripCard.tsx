@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { EZPassRecord } from '@/lib/ezpass-types';
 import { SOURCE_CONFIG, STATUS_CONFIG } from '@/lib/ezpass-types';
@@ -15,7 +15,7 @@ export default function TripCard({ record, onInvestigate, onMarkDuplicate }: Pro
   const statusConfig = STATUS_CONFIG[record.status];
 
   return (
-    <div className={`bg-[#1E293B] rounded-2xl p-4 border shadow-sm transition-all ${
+    <div className={`bg-[#1E293B] rounded-sm p-4 border shadow-sm transition-all ${
       record.status === 'duplicate' 
         ? 'border-red-500/40 bg-red-500/5' 
         : record.status === 'verified'
@@ -45,7 +45,7 @@ export default function TripCard({ record, onInvestigate, onMarkDuplicate }: Pro
 
       {/* Mostrar razón de duplicado si aplica */}
       {record.status === 'duplicate' && record.duplicate_of_id && (
-        <div className="mt-3 p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+        <div className="mt-3 p-2 bg-red-500/10 rounded-sm border border-red-500/20">
           <p className="text-[11px] text-red-300">
             ⚠️ Posible duplicado detectado. Misma fecha/hora que otro registro.
           </p>
@@ -59,13 +59,13 @@ export default function TripCard({ record, onInvestigate, onMarkDuplicate }: Pro
             <>
               <button
                 onClick={() => onMarkDuplicate?.(record)}
-                className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+                className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-medium py-2 px-3 rounded-sm transition-colors"
               >
                 Confirmar Duplicado
               </button>
               <button
                 onClick={() => onInvestigate?.(record)}
-                className="flex-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+                className="flex-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-xs font-medium py-2 px-3 rounded-sm transition-colors"
               >
                 Generar Disputa
               </button>
@@ -74,7 +74,7 @@ export default function TripCard({ record, onInvestigate, onMarkDuplicate }: Pro
           {record.status === 'pending' && (
             <button
               onClick={() => onInvestigate?.(record)}
-              className="flex-1 bg-slate-700/50 hover:bg-slate-700/70 text-slate-300 text-xs font-medium py-2 px-3 rounded-lg transition-colors"
+              className="flex-1 bg-slate-700/50 hover:bg-slate-700/70 text-slate-300 text-xs font-medium py-2 px-3 rounded-sm transition-colors"
             >
               Ver Detalles
             </button>

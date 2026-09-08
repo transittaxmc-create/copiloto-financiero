@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { BottomNav } from "@/components/pwa/bottom-nav";
-import { Camera, Search, AlertTriangle, ChevronLeft, ChevronRight, FileText, Shield } from "lucide-react";
+import { Camera, Search, ChevronLeft, ChevronRight, Plus, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EZPassRecord, EZPassDispute, EZPassSummary, EZPassSource } from "@/lib/ezpass-types";
 import { fetchRecordsByMonth, fetchSummary, fetchDisputes, createRecord, updateRecordStatus, createDispute, detectDuplicates, filterBySource } from "@/lib/ezpass-service";
@@ -114,27 +114,38 @@ export default function EZPassPage() {
   const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white pb-20">
-      <div className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-sm border-b border-slate-800">
-        <div className="flex items-center justify-between p-4">
+    <div className="min-h-screen bg-[#0B0F19] text-white pb-20">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-[#0B0F19]/95 backdrop-blur-sm border-b border-slate-800/60">
+        <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <button className="text-slate-400 hover:text-white">
-              <ChevronLeft size={20} />
-            </button>
+            <div className="w-8 h-8 bg-sky-500 rounded-sm flex items-center justify-center">
+              <span className="text-xs font-bold text-white">EZ</span>
+            </div>
             <div>
-              <h1 className="font-bold text-lg">E-ZPass Reconciliación</h1>
-              <p className="text-xs text-slate-400">Anti-Duplicados & Disputas</p>
+              <h1 className="font-semibold text-sm text-white">E-ZPass</h1>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Reconciliación</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="bg-sky-500 hover:bg-sky-400 text-white p-2.5 rounded-xl transition-colors"
-          >
-            <Camera size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDisputes(true)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <History size={16} />
+            </button>
+            <button
+              onClick={() => setShowUpload(true)}
+              className="bg-sky-500 hover:bg-sky-400 text-white px-3 py-1.5 rounded-sm text-xs font-medium transition-colors flex items-center gap-1.5"
+            >
+              <Plus size={12} />
+              Subir
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center justify-center gap-4 px-4 pb-3">
+        {/* Month selector */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-800/40">
           <button
             onClick={() => {
               if (selectedMonth === 1) {
@@ -144,11 +155,11 @@ export default function EZPassPage() {
                 setSelectedMonth(selectedMonth - 1);
               }
             }}
-            className="text-slate-400 hover:text-white p-1"
+            className="p-1 text-slate-500 hover:text-white transition-colors"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={14} />
           </button>
-          <span className="text-sm font-medium w-24 text-center">
+          <span className="text-xs font-medium text-slate-300 uppercase tracking-wider">
             {monthNames[selectedMonth - 1]} {selectedYear}
           </span>
           <button
@@ -160,28 +171,33 @@ export default function EZPassPage() {
                 setSelectedMonth(selectedMonth + 1);
               }
             }}
-            className="text-slate-400 hover:text-white p-1"
+            className="p-1 text-slate-500 hover:text-white transition-colors"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={14} />
           </button>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="px-4 py-4 space-y-4">
+        {/* Summary Cards */}
         <SummaryCards summary={summary} />
+
+        {/* Source Tabs */}
         <SourceTabs activeTab={activeTab} onTabChange={setActiveTab} counts={counts} />
 
+        {/* Records List */}
         <div className="space-y-2">
           {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-slate-400 text-sm mt-2">Cargando registros...</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-sm animate-spin"></div>
             </div>
           ) : filteredRecords.length === 0 ? (
-            <div className="text-center py-12">
-              <Search size={32} className="text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400">No hay registros para este mes</p>
-              <p className="text-slate-500 text-xs mt-1">Sube un screenshot o statement para comenzar</p>
+            <div className="text-center py-16">
+              <div className="w-12 h-12 bg-slate-800 rounded-sm flex items-center justify-center mx-auto mb-3">
+                <Search size={20} className="text-slate-600" />
+              </div>
+              <p className="text-sm text-slate-400">Sin registros</p>
+              <p className="text-xs text-slate-600 mt-1">Sube un screenshot para comenzar</p>
             </div>
           ) : (
             filteredRecords.map((record) => (
