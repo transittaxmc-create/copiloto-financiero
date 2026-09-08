@@ -162,8 +162,20 @@ export default function RegisterFlow() {
     const grossTotal = grossNum + tipsNum + tollsNum;
     const netPayout = grossTotal - feeNum - blackCarFeeNum;
 
+    console.log('Guardando viaje:', editingTrip.id, {
+      earnings: grossNum,
+      tips: tipsNum,
+      tolls: tollsNum,
+      platform_fee: feeNum,
+      black_car_phones_fee: blackCarFeeNum,
+      gross: grossTotal,
+      net: netPayout,
+      net_payout: netPayout,
+      trip_notes: editNotes
+    });
+
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('trips')
         .update({
           earnings: grossNum,
@@ -176,9 +188,15 @@ export default function RegisterFlow() {
           net_payout: netPayout,
           trip_notes: editNotes
         })
-        .eq('id', editingTrip.id);
+        .eq('id', editingTrip.id)
+        .select();
 
-      if (error) throw error;
+      console.log('Respuesta de Supabase:', { data, error });
+
+      if (error) {
+        console.error('Error de Supabase:', error);
+        throw error;
+      }
 
       setTrips(prev =>
         prev.map(t =>
@@ -200,10 +218,11 @@ export default function RegisterFlow() {
       );
 
       setEditingTrip(null);
-      showToast('Viaje actualizado');
+      showToast('✓ Viaje actualizado correctamente');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al actualizar';
-      showToast(msg, 'error');
+      console.error('Error en handleSaveEdit:', err);
+      showToast(`Error: ${msg}`, 'error');
     } finally {
       setSavingEdit(false);
     }

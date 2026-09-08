@@ -134,25 +134,34 @@ export default function DailyEntry() {
     const grossTotal = grossNum + tipsNum + tollsNum;
     const netPayout = grossTotal - feeNum;
 
-    try {
-      const { error } = await supabase.from('trips').insert({
-        platform_id: platform.toLowerCase(),
-        earnings: grossNum,
-        tips: tipsNum,
-        tolls: tollsNum,
-        platform_fee: feeNum,
-        gross: grossTotal,
-        net: netPayout,
-        net_payout: netPayout,
-        pickup_time: pickup ? new Date().toISOString() : null,
-        dropoff_time: dropoff ? new Date().toISOString() : null,
-        pickup_gps: pickup ? { name: pickup.name, city: pickup.city, lat: pickup.lat, lng: pickup.lng, type: pickup.type, address: pickup.fullAddress } : null,
-        dropoff_gps: dropoff ? { name: dropoff.name, city: dropoff.city, lat: dropoff.lat, lng: dropoff.lng, type: dropoff.type, address: dropoff.fullAddress } : null,
-        trip_notes: ref ? `Ref: ${ref}` : '',
-        status: 'pending'
-      });
+    const tripData = {
+      platform_id: platform.toLowerCase(),
+      earnings: grossNum,
+      tips: tipsNum,
+      tolls: tollsNum,
+      platform_fee: feeNum,
+      gross: grossTotal,
+      net: netPayout,
+      net_payout: netPayout,
+      pickup_time: pickup ? new Date().toISOString() : null,
+      dropoff_time: dropoff ? new Date().toISOString() : null,
+      pickup_gps: pickup ? { name: pickup.name, city: pickup.city, lat: pickup.lat, lng: pickup.lng, type: pickup.type, address: pickup.fullAddress } : null,
+      dropoff_gps: dropoff ? { name: dropoff.name, city: dropoff.city, lat: dropoff.lat, lng: dropoff.lng, type: dropoff.type, address: dropoff.fullAddress } : null,
+      trip_notes: ref ? `Ref: ${ref}` : '',
+      status: 'pending'
+    };
 
-      if (error) throw error;
+    console.log('Guardando nuevo viaje:', tripData);
+
+    try {
+      const { data, error } = await supabase.from('trips').insert(tripData).select();
+
+      console.log('Respuesta de Supabase:', { data, error });
+
+      if (error) {
+        console.error('Error de Supabase al insertar:', error);
+        throw error;
+      }
 
       setFeedback({ text: '✓ Trip guardado exitosamente en Supabase', type: 'success' });
       setGross('');
@@ -165,6 +174,7 @@ export default function DailyEntry() {
       setTimeout(() => setFeedback(null), 3500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido al guardar';
+      console.error('Error en handleSave:', err);
       setFeedback({ text: `Error al guardar: ${msg}`, type: 'error' });
       setTimeout(() => setFeedback(null), 4000);
     } finally {
