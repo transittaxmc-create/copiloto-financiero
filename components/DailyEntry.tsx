@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
+import { PLATFORMS, logoFor } from '@/lib/logos';
 
 interface LocationPoint {
   name: string;
@@ -13,7 +14,7 @@ interface LocationPoint {
   lng?: number;
 }
 
-const PLATFORMS = ['Uber', 'Lyft', 'Via', 'Gotham', 'Particular'];
+// Plataformas compartidas (ver @/lib/logos): 14 opciones con logo redondo
 
 export default function DailyEntry() {
   const [platform, setPlatform] = useState('Uber');
@@ -216,6 +217,8 @@ export default function DailyEntry() {
           >
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400">Plataforma:</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoFor(platform)} alt={platform} className="w-6 h-6 rounded-full object-contain" />
               <span className="font-semibold text-sm text-slate-100">{platform}</span>
             </div>
             <ChevronDown size={16} className={`text-slate-400 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
@@ -235,7 +238,11 @@ export default function DailyEntry() {
                     platform === p ? 'text-emerald-400 font-bold bg-[#334155]/60' : 'text-slate-300'
                   }`}
                 >
-                  <span>{p}</span>
+                  <span className="flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logoFor(p)} alt={p} className="w-6 h-6 rounded-full object-contain" />
+                    <span>{p}</span>
+                  </span>
                   {platform === p && <Check size={14} className="text-emerald-400" />}
                 </button>
               ))}

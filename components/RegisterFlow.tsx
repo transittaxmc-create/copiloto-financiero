@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
+import { logoFor } from '@/lib/logos';
 import Link from 'next/link';
 
 interface LocationInfo {
@@ -211,6 +212,14 @@ export default function RegisterFlow() {
     return true;
   });
 
+  // Agrupación por plataforma (con logo en el header del grupo)
+  const groups = new Map<string, TripItem[]>();
+  filteredTrips.forEach((t) => {
+    const key = (t.platform_id || 'viaje').toLowerCase().trim() || 'viaje';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(t);
+  });
+
   const totalGross = trips.reduce((sum, t) => sum + (Number(t.gross) || 0), 0);
   const totalNet = trips.reduce((sum, t) => sum + (Number(t.net_payout || t.net) || 0), 0);
   const pendingCount = trips.filter(t => (t.status || 'pending').toLowerCase() === 'pending').length;
@@ -346,7 +355,20 @@ export default function RegisterFlow() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredTrips.map(trip => {
+          {[...groups.entries()].map(([groupKey, groupTrips]) => {
+            const groupLabel = groupTrips[0]?.platform_id || 'Viaje';
+            const groupCount = groupTrips.length;
+            return (
+              <div key={groupKey} className="space-y-2.5">
+                {/* Header de grupo con logo redondo */}
+                <div className="flex items-center gap-2.5 bg-[#1E293B] rounded-xl px-3 py-2 border border-gray-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoFor(groupLabel)} alt={groupLabel} className="w-6 h-6 rounded-full object-contain" />
+                  <h3 className="capitalize font-bold text-sm text-white">{groupLabel}</h3>
+                  <span className="text-[11px] text-gray-400 ml-auto">{groupCount} viaje(s)</span>
+                </div>
+                <div className="space-y-3">
+                  {groupTrips.map(trip => {
             const normStatus = (trip.status || 'pending').toLowerCase();
             const isPending = normStatus === 'pending';
             const isReconciled = normStatus === 'reconciled';
@@ -378,7 +400,9 @@ export default function RegisterFlow() {
                 {/* Header card: Platform & Status */}
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="capitalize font-bold text-base tracking-wide text-white">
+                    <span className="flex items-center gap-1.5 capitalize font-bold text-base tracking-wide text-white">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={logoFor(trip.platform_id)} alt={trip.platform_id || 'Viaje'} className="w-5 h-5 rounded-full object-contain" />
                       {trip.platform_id || 'Viaje'}
                     </span>
                     <span className="text-[11px] text-gray-500">· {createdDate}</span>
@@ -421,6 +445,31 @@ export default function RegisterFlow() {
                     {trip.tolls > 0 && <p className="text-sky-400/80">Tolls: +${Number(trip.tolls).toFixed(2)}</p>}
                     {trip.platform_fee > 0 && <p className="text-red-400/80">Fee: -${Number(trip.platform_fee).toFixed(2)}</p>}
                   </div>
+                </div>
+
+                {/* GPS Pickup / Dropoff con coordenadas y hora */}
+                <div className="bg-[#0F172A]/40 rounded-xl border border-gray-700/50 p-2.5 mt-1 space-y-1.5">
+                  <div className="flex items-start gap-1.5 text-[11px] text-gray-300">
+                    <MapPin size={12} className="text-green-400 shrink-0" />
+                    <span className="font-semibold">Pickup:</span>
+                    <span className="truncate">{pickupLabel}</span>
+                    {trip.pickup_gps?.lat ? <span className="text-gray-500 whitespace-nowrap">({trip.pickup_gps.lat.toFixed(5)}, {trip.pickup_gps.lng?.toFixed(5)})</span> : null}
+                    {trip.pickup_time ? <span className="text-gray-500 whitespace-nowrap">{new Date(trip.pickup_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span> : null}
+                  </div>
+                  <div className="flex items-start gap-1.5 text-[11px] text-gray-300">
+                    <MapPin size={12} className="text-blue-400 shrink-0" />
+                    <span className="font-semibold">Dropoff:</span>
+                    <span className="truncate">{dropoffLabel}</span>
+                    {trip.dropoff_gps?.lat ? <span className="text-gray-500 whitespace-nowrap">({trip.dropoff_gps.lat.toFixed(5)}, {trip.dropoff_gps.lng?.toFixed(5)})</span> : null}
+                    {trip.dropoff_time ? <span className="text-gray-500 whitespace-nowrap">{new Date(trip.dropoff_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span> : null}
+                  </div>
+                </div>
+
+                {/* Montos: Gross verde · Tips azul · Toll naranja */}
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span className="bg-green-500/15 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">Gross ${grossVal.toFixed(2)}</span>
+                  <span className="bg-blue-500/15 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-bold">Tips ${Number(trip.tips || 0).toFixed(2)}</span>
+                  <span className="bg-orange-500/15 text-orange-400 text-[10px] px-2 py-0.5 rounded-full font-bold">Toll ${Number(trip.tolls || 0).toFixed(2)}</span>
                 </div>
 
                 {trip.trip_notes && (
@@ -485,6 +534,10 @@ export default function RegisterFlow() {
                       </button>
                     )}
                   </div>
+                </div>
+              </div>
+            );
+          })}
                 </div>
               </div>
             );

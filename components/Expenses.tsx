@@ -201,6 +201,12 @@ export default function Expenses() {
           onClick={() => setShowModal(true)}
           className="bg-green-400 text-black font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 hover:bg-green-300 transition-colors shadow"
         >
+          <Camera size={15} /> Escanear Recibo
+        </button>
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-green-400 text-black font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 hover:bg-green-300 transition-colors shadow"
+        >
           <Plus size={16} /> Nuevo Gasto
         </button>
       </div>
@@ -328,7 +334,7 @@ export default function Expenses() {
                       exp.is_business ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                     }`}
                   >
-                    {exp.is_business ? 'Business' : 'Personal'}
+                    {exp.is_business ? '[BUSINESS]' : '[PERSONAL]'}
                   </span>
                 </div>
                 <button
@@ -368,7 +374,7 @@ export default function Expenses() {
                     : 'bg-[#0F172A] text-gray-400 border border-gray-700'
                 }`}
               >
-                <Briefcase size={14} /> BUSINESS (100%)
+                <Briefcase size={14} /> [BUSINESS]
               </button>
               <button
                 type="button"
@@ -379,7 +385,7 @@ export default function Expenses() {
                     : 'bg-[#0F172A] text-gray-400 border border-gray-700'
                 }`}
               >
-                <User size={14} /> PERSONAL
+                <User size={14} /> [PERSONAL]
               </button>
             </div>
 
