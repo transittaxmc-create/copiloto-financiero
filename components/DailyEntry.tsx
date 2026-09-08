@@ -140,6 +140,7 @@ export default function DailyEntry() {
       tips: tipsNum,
       tolls: tollsNum,
       platform_fee: feeNum,
+      black_car_phones_fee: 2.75,
       gross: grossTotal,
       net: netPayout,
       net_payout: netPayout,

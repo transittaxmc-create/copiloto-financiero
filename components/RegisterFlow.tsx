@@ -69,8 +69,9 @@ export default function RegisterFlow() {
   const [savingEdit, setSavingEdit] = useState(false);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    console.log(`Toast [${type}]:`, text);
     setToast({ text, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), type === 'error' ? 6000 : 3000);
   };
 
   const fetchTrips = useCallback(async () => {
@@ -690,7 +691,8 @@ export default function RegisterFlow() {
               <button
                 type="button"
                 onClick={() => setEditingTrip(null)}
-                className="flex-1 bg-transparent border border-gray-700 text-gray-300 py-3 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors"
+                disabled={savingEdit}
+                className="flex-1 bg-transparent border border-gray-700 text-gray-300 py-3 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -698,9 +700,19 @@ export default function RegisterFlow() {
                 type="button"
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
-                className="flex-1 bg-green-400 text-black py-3 rounded-xl font-bold text-sm hover:bg-green-300 transition-colors flex items-center justify-center gap-1"
+                className="flex-1 bg-green-400 text-black py-3 rounded-xl font-bold text-sm hover:bg-green-300 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
               >
-                {savingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                {savingEdit ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    Guardar Cambios
+                  </>
+                )}
               </button>
             </div>
           </div>
