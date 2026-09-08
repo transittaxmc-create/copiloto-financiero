@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from 'react';
-import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight } from 'lucide-react';
+import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight, Store } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { PLATFORMS, logoFor } from '@/lib/logos';
@@ -12,6 +12,8 @@ interface LocationPoint {
   time: string;
   lat?: number;
   lng?: number;
+  type?: 'business' | 'residence' | 'unknown';
+  fullAddress?: string;
 }
 
 // Plataformas compartidas (ver @/lib/logos): 14 opciones con logo redondo
@@ -81,9 +83,16 @@ export default function DailyEntry() {
             const data = await res.json();
             const road = data.address?.road || data.address?.neighbourhood || (type === 'pickup' ? 'Punto Recogida' : 'Punto Destino');
             const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || 'Local';
-            setLoc({ name: road, city, time: nowStr, lat, lng });
+            const houseNumber = data.address?.house_number || '';
+            const state = data.address?.state || '';
+            const postcode = data.address?.postcode || '';
+            const fullAddress = `${houseNumber} ${road}, ${city}, ${state} ${postcode}`.trim();
+            const categories = data.category || data.type || '';
+            const isBusiness = categories.includes('shop') || categories.includes('amenity') || categories.includes('tourism') || (data.name && data.name !== road);
+            const locType = isBusiness ? 'business' : 'residence';
+            setLoc({ name: road, city, time: nowStr, lat, lng, type: locType, fullAddress });
           } catch {
-            setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: 'Local', time: nowStr, lat, lng });
+            setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: 'Local', time: nowStr, lat, lng, type: 'unknown' });
           } finally {
             setLoading(false);
           }
@@ -137,8 +146,8 @@ export default function DailyEntry() {
         net_payout: netPayout,
         pickup_time: pickup ? new Date().toISOString() : null,
         dropoff_time: dropoff ? new Date().toISOString() : null,
-        pickup_gps: pickup ? { name: pickup.name, city: pickup.city, lat: pickup.lat, lng: pickup.lng } : null,
-        dropoff_gps: dropoff ? { name: dropoff.name, city: dropoff.city, lat: dropoff.lat, lng: dropoff.lng } : null,
+        pickup_gps: pickup ? { name: pickup.name, city: pickup.city, lat: pickup.lat, lng: pickup.lng, type: pickup.type, address: pickup.fullAddress } : null,
+        dropoff_gps: dropoff ? { name: dropoff.name, city: dropoff.city, lat: dropoff.lat, lng: dropoff.lng, type: dropoff.type, address: dropoff.fullAddress } : null,
         trip_notes: ref ? `Ref: ${ref}` : '',
         status: 'pending'
       });
@@ -318,26 +327,38 @@ export default function DailyEntry() {
 
       {/* Tarjetas Indicadoras de Ubicación */}
       <div className="grid grid-cols-2 gap-2.5">
-        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between min-h-[66px] shadow-sm ${
+        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between h-[60px] shadow-sm ${
           pickup ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-700/80'
         }`}>
           <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs truncate">
-            <Home size={13} className="shrink-0" />
-            <span className="truncate">{pickup ? pickup.name : 'Pickup Pendiente'}</span>
+            {pickup?.type === 'business' ? (
+              <Store size={13} className="shrink-0" />
+            ) : (
+              <Home size={13} className="shrink-0" />
+            )}
+            <span className="truncate">
+              {pickup ? (pickup.type === 'business' ? pickup.name : 'Residencia') : 'Pickup Pendiente'}
+            </span>
           </div>
-          <div className="text-[11px] text-slate-400 truncate mt-1">
+          <div className="text-[11px] text-slate-400 truncate">
             {pickup ? `${pickup.time} · ${pickup.city}` : 'Toca el botón verde'}
           </div>
         </div>
 
-        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between min-h-[66px] shadow-sm ${
+        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between h-[60px] shadow-sm ${
           dropoff ? 'border-sky-500/40 bg-sky-500/5' : 'border-slate-700/80'
         }`}>
           <div className="flex items-center gap-1 text-sky-400 font-bold text-xs truncate">
-            <MapPin size={13} className="shrink-0" />
-            <span className="truncate">{dropoff ? dropoff.name : 'Destino Pendiente'}</span>
+            {dropoff?.type === 'business' ? (
+              <Store size={13} className="shrink-0" />
+            ) : (
+              <MapPin size={13} className="shrink-0" />
+            )}
+            <span className="truncate">
+              {dropoff ? (dropoff.type === 'business' ? dropoff.name : 'Residencia') : 'Destino Pendiente'}
+            </span>
           </div>
-          <div className="text-[11px] text-slate-400 truncate mt-1">
+          <div className="text-[11px] text-slate-400 truncate">
             {dropoff ? `${dropoff.time} · ${dropoff.city}` : 'Toca el botón azul'}
           </div>
         </div>

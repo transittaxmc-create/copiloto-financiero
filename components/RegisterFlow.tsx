@@ -42,6 +42,7 @@ interface TripItem {
   tips: number;
   tolls: number;
   platform_fee: number;
+  black_car_phones_fee: number;
   gross: number;
   net: number;
   net_payout: number;
@@ -63,6 +64,7 @@ export default function RegisterFlow() {
   const [editTips, setEditTips] = useState('');
   const [editTolls, setEditTolls] = useState('');
   const [editFee, setEditFee] = useState('');
+  const [editBlackCarFee, setEditBlackCarFee] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -144,6 +146,7 @@ export default function RegisterFlow() {
     setEditTips(trip.tips ? trip.tips.toString() : '');
     setEditTolls(trip.tolls ? trip.tolls.toString() : '');
     setEditFee(trip.platform_fee ? trip.platform_fee.toString() : '');
+    setEditBlackCarFee(trip.black_car_phones_fee ? trip.black_car_phones_fee.toString() : '');
     setEditNotes(trip.trip_notes || '');
   };
 
@@ -155,8 +158,9 @@ export default function RegisterFlow() {
     const tipsNum = parseFloat(editTips) || 0;
     const tollsNum = parseFloat(editTolls) || 0;
     const feeNum = parseFloat(editFee) || 0;
+    const blackCarFeeNum = parseFloat(editBlackCarFee) || 0;
     const grossTotal = grossNum + tipsNum + tollsNum;
-    const netPayout = grossTotal - feeNum;
+    const netPayout = grossTotal - feeNum - blackCarFeeNum;
 
     try {
       const { error } = await supabase
@@ -166,6 +170,7 @@ export default function RegisterFlow() {
           tips: tipsNum,
           tolls: tollsNum,
           platform_fee: feeNum,
+          black_car_phones_fee: blackCarFeeNum,
           gross: grossTotal,
           net: netPayout,
           net_payout: netPayout,
@@ -184,6 +189,7 @@ export default function RegisterFlow() {
                 tips: tipsNum,
                 tolls: tollsNum,
                 platform_fee: feeNum,
+                black_car_phones_fee: blackCarFeeNum,
                 gross: grossTotal,
                 net: netPayout,
                 net_payout: netPayout,
@@ -548,7 +554,7 @@ export default function RegisterFlow() {
       {/* Edit Trip Modal */}
       {editingTrip && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1E293B] rounded-2xl p-5 w-full max-w-sm border border-gray-700 shadow-2xl">
+          <div className="bg-[#1E293B] rounded-2xl p-5 w-full max-w-sm border border-gray-700 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <Pencil size={18} className="text-green-400" /> Editar Viaje
@@ -559,6 +565,35 @@ export default function RegisterFlow() {
             </div>
 
             <div className="space-y-3 mb-5">
+              {/* Sección de Ubicación */}
+              <div className="bg-[#0F172A] rounded-xl p-3 border border-gray-700/50">
+                <h4 className="text-xs font-bold text-gray-300 mb-2 flex items-center gap-1">
+                  <MapPin size={12} className="text-green-400" /> Detalles de Ubicación
+                </h4>
+                <div className="mb-2">
+                  <p className="text-[10px] text-green-400 font-semibold mb-1">PICKUP</p>
+                  <p className="text-xs text-white font-medium">{editingTrip.pickup_gps?.name || 'N/A'}</p>
+                  <p className="text-[11px] text-gray-400">{editingTrip.pickup_gps?.address || editingTrip.pickup_gps?.city || ''}</p>
+                  {editingTrip.pickup_gps?.lat && (
+                    <span className="text-[10px] text-gray-500">📍 {editingTrip.pickup_gps.lat.toFixed(5)}, {editingTrip.pickup_gps.lng?.toFixed(5)}</span>
+                  )}
+                  {editingTrip.pickup_time && (
+                    <p className="text-[10px] text-gray-500">🕐 {new Date(editingTrip.pickup_time).toLocaleDateString('es-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[10px] text-blue-400 font-semibold mb-1">DROPOFF</p>
+                  <p className="text-xs text-white font-medium">{editingTrip.dropoff_gps?.name || 'N/A'}</p>
+                  <p className="text-[11px] text-gray-400">{editingTrip.dropoff_gps?.address || editingTrip.dropoff_gps?.city || ''}</p>
+                  {editingTrip.dropoff_gps?.lat && (
+                    <span className="text-[10px] text-gray-500">📍 {editingTrip.dropoff_gps.lat.toFixed(5)}, {editingTrip.dropoff_gps.lng?.toFixed(5)}</span>
+                  )}
+                  {editingTrip.dropoff_time && (
+                    <p className="text-[10px] text-gray-500">🕐 {new Date(editingTrip.dropoff_time).toLocaleDateString('es-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs text-gray-400 block mb-1">Gross fare</label>
                 <input
@@ -603,6 +638,18 @@ export default function RegisterFlow() {
                   inputMode="decimal"
                   value={editFee}
                   onChange={e => setEditFee(e.target.value)}
+                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400 block mb-1">Black Car Phones Fee</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={editBlackCarFee}
+                  onChange={e => setEditBlackCarFee(e.target.value)}
                   className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
                   placeholder="0.00"
                 />
