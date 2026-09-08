@@ -1,10 +1,12 @@
 ﻿"use client";
 
 import { useState, useEffect } from 'react';
-import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight, Store } from 'lucide-react';
+import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight, Store, Cloud, CloudOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { PLATFORMS, logoFor } from '@/lib/logos';
+import { addLocalTrip, getLocalTrips } from '@/lib/localStore';
+import { syncTripsWithSupabase } from '@/lib/syncManager';
 
 interface LocationPoint {
   name: string;
@@ -36,7 +38,7 @@ export default function DailyEntry() {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [currentAddress, setCurrentAddress] = useState('Buscando señal GPS...');
   const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000);
@@ -152,19 +154,25 @@ export default function DailyEntry() {
       status: 'pending'
     };
 
-    console.log('Guardando nuevo viaje:', tripData);
+    console.log('[DailyEntry] Guardando viaje:', tripData);
 
     try {
-      const { data, error } = await supabase.from('trips').insert(tripData).select();
+      // 1. GUARDAR LOCALMENTE SIEMPRE (Offline-First)
+      const localTrip = addLocalTrip(tripData);
+      console.log('[DailyEntry] Trip guardado localmente:', localTrip.id);
 
-      console.log('Respuesta de Supabase:', { data, error });
+      // 2. Intentar sync con Supabase en segundo plano
+      const syncResult = await syncTripsWithSupabase();
+      console.log('[DailyEntry] Resultado sync:', syncResult);
 
-      if (error) {
-        console.error('Error de Supabase al insertar:', error);
-        throw error;
+      // 3. Mostrar feedback apropiado
+      if (syncResult.errors > 0) {
+        setFeedback({ text: '⚠ Guardado localmente. Sin conexión al servidor.', type: 'warning' });
+      } else {
+        setFeedback({ text: '✓ Trip guardado exitosamente', type: 'success' });
       }
 
-      setFeedback({ text: '✓ Trip guardado exitosamente en Supabase', type: 'success' });
+      // 4. Limpiar formulario
       setGross('');
       setTips('');
       setTolls('');
@@ -175,9 +183,8 @@ export default function DailyEntry() {
       setTimeout(() => setFeedback(null), 3500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido al guardar';
-      console.error('Error en handleSave:', err);
-      setFeedback({ text: `Error al guardar: ${msg}`, type: 'error' });
-      alert(`Error al guardar: ${msg}\n\nRevisa la consola del navegador (F12) para más detalles.`);
+      console.error('[DailyEntry] Error en handleSave:', err);
+      setFeedback({ text: `Error: ${msg}`, type: 'error' });
       setTimeout(() => setFeedback(null), 4000);
     } finally {
       setSaving(false);

@@ -16,12 +16,18 @@ import {
   X, 
   Check, 
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  Cloud,
+  CloudOff,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { logoFor } from '@/lib/logos';
 import Link from 'next/link';
+import { getLocalTrips, deleteLocalTrip, updateLocalTrip, LocalTrip } from '@/lib/localStore';
+import { syncTripsWithSupabase } from '@/lib/syncManager';
 
 interface LocationInfo {
   name?: string;
@@ -48,6 +54,7 @@ interface TripItem {
   net_payout: number;
   status: 'pending' | 'reconciled' | 'in_ledger' | string;
   trip_notes: string;
+  sync_status?: 'local' | 'synced' | 'error';
   created_at: string;
 }
 
@@ -76,16 +83,27 @@ export default function RegisterFlow() {
 
   const fetchTrips = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('trips')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // 1. Cargar datos locales inmediatamente (Offline-First)
+      const localTrips = getLocalTrips();
+      setTrips((localTrips as TripItem[]) || []);
+      console.log('[RegisterFlow] Trips cargados localmente:', localTrips.length);
 
-      if (error) throw error;
-      setTrips((data as TripItem[]) || []);
+      // 2. Intentar sincronizar con Supabase en segundo plano
+      const syncResult = await syncTripsWithSupabase();
+      console.log('[RegisterFlow] Sync result:', syncResult);
+
+      // 3. Recargar datos locales después del sync (pueden tener nuevos IDs)
+      const updatedTrips = getLocalTrips();
+      setTrips((updatedTrips as TripItem[]) || []);
+
+      // 4. Mostrar aviso si hay trips pendientes de sync
+      const pendingCount = updatedTrips.filter(t => t.sync_status === 'local' || t.sync_status === 'error').length;
+      if (pendingCount > 0) {
+        console.log(`[RegisterFlow] ${pendingCount} trips pendientes de sincronización`);
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar viajes';
-      showToast(msg, 'error');
+      // No mostrar error rojo - los datos locales ya están cargados
+      console.warn('[RegisterFlow] Error en sync (usando datos locales):', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -130,14 +148,20 @@ export default function RegisterFlow() {
     if (!window.confirm('¿Seguro que deseas eliminar este viaje?')) return;
 
     try {
-      const { error } = await supabase.from('trips').delete().eq('id', id);
-      if (error) throw error;
-
+      // 1. Eliminar localmente primero
+      deleteLocalTrip(id);
       setTrips(prev => prev.filter(t => t.id !== id));
+
+      // 2. Intentar eliminar de Supabase (si no es ID local)
+      if (!id.startsWith('local_')) {
+        await supabase.from('trips').delete().eq('id', id);
+      }
+
       showToast('Viaje eliminado');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al eliminar';
-      showToast(msg, 'error');
+      // El viaje ya fue eliminado localmente, no mostrar error
+      console.warn('[RegisterFlow] Error al eliminar de Supabase:', err);
+      showToast('Viaje eliminado localmente');
     }
   };
 
@@ -163,7 +187,7 @@ export default function RegisterFlow() {
     const grossTotal = grossNum + tipsNum + tollsNum;
     const netPayout = grossTotal - feeNum - blackCarFeeNum;
 
-    console.log('Guardando viaje:', editingTrip.id, {
+    const updates = {
       earnings: grossNum,
       tips: tipsNum,
       tolls: tollsNum,
@@ -172,59 +196,39 @@ export default function RegisterFlow() {
       gross: grossTotal,
       net: netPayout,
       net_payout: netPayout,
-      trip_notes: editNotes
-    });
+      trip_notes: editNotes,
+    };
+
+    console.log('[RegisterFlow] Editando viaje:', editingTrip.id, updates);
 
     try {
-      const { data, error } = await supabase
-        .from('trips')
-        .update({
-          earnings: grossNum,
-          tips: tipsNum,
-          tolls: tollsNum,
-          platform_fee: feeNum,
-          black_car_phones_fee: blackCarFeeNum,
-          gross: grossTotal,
-          net: netPayout,
-          net_payout: netPayout,
-          trip_notes: editNotes
-        })
-        .eq('id', editingTrip.id)
-        .select();
-
-      console.log('Respuesta de Supabase:', { data, error });
-
-      if (error) {
-        console.error('Error de Supabase:', error);
-        throw error;
+      // 1. Actualizar localmente primero
+      const updatedTrip = updateLocalTrip(editingTrip.id, updates);
+      if (updatedTrip) {
+        setTrips(prev =>
+          prev.map(t => t.id === editingTrip.id ? { ...t, ...updates } : t)
+        );
       }
 
-      setTrips(prev =>
-        prev.map(t =>
-          t.id === editingTrip.id
-            ? {
-                ...t,
-                earnings: grossNum,
-                tips: tipsNum,
-                tolls: tollsNum,
-                platform_fee: feeNum,
-                black_car_phones_fee: blackCarFeeNum,
-                gross: grossTotal,
-                net: netPayout,
-                net_payout: netPayout,
-                trip_notes: editNotes
-              }
-            : t
-        )
-      );
+      // 2. Intentar actualizar en Supabase (si no es ID local)
+      if (!editingTrip.id.startsWith('local_')) {
+        const { error } = await supabase
+          .from('trips')
+          .update(updates)
+          .eq('id', editingTrip.id);
+
+        if (error) {
+          console.warn('[RegisterFlow] Error al actualizar en Supabase:', error);
+          // No bloquear la UI, el cambio ya está guardado localmente
+        }
+      }
 
       setEditingTrip(null);
-      showToast('✓ Viaje actualizado correctamente');
+      showToast('✓ Viaje actualizado');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al actualizar';
-      console.error('Error en handleSaveEdit:', err);
-      showToast(`Error: ${msg}`, 'error');
-      alert(`Error al guardar: ${msg}\n\nRevisa la consola del navegador (F12) para más detalles.`);
+      console.error('[RegisterFlow] Error en handleSaveEdit:', err);
+      showToast(`Guardado localmente. Error en servidor: ${msg}`, 'error');
     } finally {
       setSavingEdit(false);
     }
@@ -264,6 +268,26 @@ export default function RegisterFlow() {
         >
           {toast.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
           {toast.text}
+        </div>
+      )}
+
+      {/* Sync Status Banner */}
+      {trips.some(t => t.sync_status === 'local' || t.sync_status === 'error') && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-3 py-2 mb-4 flex items-center gap-2">
+          {navigator.onLine ? (
+            <Cloud size={14} className="text-yellow-400" />
+          ) : (
+            <WifiOff size={14} className="text-yellow-400" />
+          )}
+          <span className="text-xs text-yellow-400">
+            {trips.filter(t => t.sync_status === 'local' || t.sync_status === 'error').length} viaje(s) pendientes de sincronizar
+          </span>
+          <button
+            onClick={fetchTrips}
+            className="ml-auto text-xs text-yellow-400 hover:text-yellow-300 underline"
+          >
+            Reintentar
+          </button>
         </div>
       )}
 
@@ -433,6 +457,16 @@ export default function RegisterFlow() {
                       {trip.platform_id || 'Viaje'}
                     </span>
                     <span className="text-[11px] text-gray-500">· {createdDate}</span>
+                    {trip.sync_status === 'local' && (
+                      <span className="bg-yellow-500/20 text-yellow-400 text-[10px] px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                        <Cloud size={9} /> Local
+                      </span>
+                    )}
+                    {trip.sync_status === 'error' && (
+                      <span className="bg-red-500/20 text-red-400 text-[10px] px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                        <CloudOff size={9} /> Error sync
+                      </span>
+                    )}
                   </div>
 
                   {isPending && (
