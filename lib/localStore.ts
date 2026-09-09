@@ -18,6 +18,10 @@ export interface LocalTrip {
   dropoff_time: string | null;
   pickup_gps: any;
   dropoff_gps: any;
+  pickup_name?: string | null;
+  dropoff_name?: string | null;
+  pickup_address?: string | null;
+  dropoff_address?: string | null;
   trip_notes: string;
   status: string;
   sync_status: 'local' | 'synced' | 'error';
@@ -124,6 +128,54 @@ export function markTripError(id: string, error: string): void {
 
 export function getPendingSyncTrips(): LocalTrip[] {
   return getLocalTrips().filter(t => t.sync_status === 'local' || t.sync_status === 'error');
+}
+
+// =============================================================
+// MERGE REMOTO - Importa viajes que existen en Supabase pero no
+// localmente (por id). Los viajes sincronizados conservan el id
+// del servidor (markTripSynced reemplaza el id local), así que
+// basta comparar ids para no duplicar. Nunca sobreescribe nada.
+// =============================================================
+export function mergeRemoteTrips(remote: any[]): number {
+  if (!Array.isArray(remote) || remote.length === 0) return 0;
+  const trips = getLocalTrips();
+  const known = new Set(trips.map(t => t.id));
+  let added = 0;
+  for (const r of remote) {
+    if (!r || typeof r.id !== 'string' || known.has(r.id)) continue;
+    known.add(r.id);
+    trips.push({
+      id: r.id,
+      platform_id: r.platform_id ?? 'unknown',
+      earnings: Number(r.earnings) || 0,
+      tips: Number(r.tips) || 0,
+      tolls: Number(r.tolls) || 0,
+      platform_fee: Number(r.platform_fee) || 0,
+      black_car_phones_fee: Number(r.black_car_phones_fee) || 0,
+      gross: Number(r.gross) || 0,
+      net: Number(r.net) || 0,
+      net_payout: Number(r.net_payout) || 0,
+      pickup_time: r.pickup_time ?? null,
+      dropoff_time: r.dropoff_time ?? null,
+      pickup_gps: r.pickup_gps ?? null,
+      dropoff_gps: r.dropoff_gps ?? null,
+      pickup_name: r.pickup_name ?? null,
+      dropoff_name: r.dropoff_name ?? null,
+      pickup_address: r.pickup_address ?? null,
+      dropoff_address: r.dropoff_address ?? null,
+      trip_notes: r.trip_notes ?? '',
+      status: r.status ?? 'pending',
+      sync_status: 'synced',
+      created_at: r.created_at ?? new Date().toISOString(),
+      updated_at: r.updated_at ?? r.created_at ?? new Date().toISOString(),
+    } as LocalTrip);
+    added++;
+  }
+  if (added > 0) {
+    saveLocalTrips(trips);
+    notifyTripsChanged();
+  }
+  return added;
 }
 
 // =============================================================

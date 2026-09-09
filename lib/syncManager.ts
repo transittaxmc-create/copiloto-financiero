@@ -11,6 +11,7 @@ import {
   markExpenseSynced,
   markExpenseError,
 } from './localStore';
+import { tripsHasAddressFields } from './schema';
 
 export async function syncTripsWithSupabase(): Promise<{ synced: number; errors: number }> {
   const pending = getPendingSyncTrips();
@@ -24,27 +25,39 @@ export async function syncTripsWithSupabase(): Promise<{ synced: number; errors:
 
   console.log(`[SyncManager] Intentando sincronizar ${pending.length} trips...`);
 
+  // ¿La tabla trips tiene las columnas de dirección? (probe cacheado —
+  // evita error 400 de PostgREST si la migración aún no se ejecutó)
+  const hasAddressFields = await tripsHasAddressFields();
+
   for (const trip of pending) {
     try {
+      const payload: Record<string, unknown> = {
+        platform_id: trip.platform_id,
+        earnings: trip.earnings,
+        tips: trip.tips,
+        tolls: trip.tolls,
+        platform_fee: trip.platform_fee,
+        black_car_phones_fee: trip.black_car_phones_fee,
+        gross: trip.gross,
+        net: trip.net,
+        net_payout: trip.net_payout,
+        pickup_time: trip.pickup_time,
+        dropoff_time: trip.dropoff_time,
+        pickup_gps: trip.pickup_gps,
+        dropoff_gps: trip.dropoff_gps,
+        trip_notes: trip.trip_notes,
+        status: trip.status || 'pending',
+      };
+      if (hasAddressFields) {
+        payload.pickup_name = trip.pickup_name ?? null;
+        payload.dropoff_name = trip.dropoff_name ?? null;
+        payload.pickup_address = trip.pickup_address ?? null;
+        payload.dropoff_address = trip.dropoff_address ?? null;
+      }
+
       const { data, error } = await supabase
         .from('trips')
-        .insert({
-          platform_id: trip.platform_id,
-          earnings: trip.earnings,
-          tips: trip.tips,
-          tolls: trip.tolls,
-          platform_fee: trip.platform_fee,
-          black_car_phones_fee: trip.black_car_phones_fee,
-          gross: trip.gross,
-          net: trip.net,
-          net_payout: trip.net_payout,
-          pickup_time: trip.pickup_time,
-          dropoff_time: trip.dropoff_time,
-          pickup_gps: trip.pickup_gps,
-          dropoff_gps: trip.dropoff_gps,
-          trip_notes: trip.trip_notes,
-          status: trip.status || 'pending',
-        })
+        .insert(payload)
         .select()
         .single();
 

@@ -16,6 +16,7 @@ interface LocationPoint {
   lng?: number;
   type?: 'business' | 'residence' | 'unknown';
   fullAddress?: string;
+  capturedAt?: string; // ISO timestamp exacto al presionar el botón GPS
 }
 
 // Plataformas compartidas (ver @/lib/logos): 14 opciones con logo redondo
@@ -72,6 +73,8 @@ export default function DailyEntry() {
     setLoading(true);
 
     const nowStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    // Hora EXACTA en que se presiona el botón GPS (se usa como pickup_time/dropoff_time en la BD)
+    const capturedAt = new Date().toISOString();
 
     if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -92,9 +95,9 @@ export default function DailyEntry() {
             const categories = data.category || data.type || '';
             const isBusiness = categories.includes('shop') || categories.includes('amenity') || categories.includes('tourism') || (data.name && data.name !== road);
             const locType = isBusiness ? 'business' : 'residence';
-            setLoc({ name: road, city, time: nowStr, lat, lng, type: locType, fullAddress });
+            setLoc({ name: road, city, time: nowStr, lat, lng, type: locType, fullAddress, capturedAt });
           } catch {
-            setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: 'Local', time: nowStr, lat, lng, type: 'unknown' });
+            setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: 'Local', time: nowStr, lat, lng, type: 'unknown', capturedAt });
           } finally {
             setLoading(false);
           }
@@ -104,6 +107,7 @@ export default function DailyEntry() {
             name: type === 'pickup' ? 'Residencia' : 'Business',
             city: type === 'pickup' ? 'Lindenhurst' : 'Copiague',
             time: nowStr,
+            capturedAt,
           });
           setLoading(false);
         },
@@ -114,6 +118,7 @@ export default function DailyEntry() {
         name: type === 'pickup' ? 'Residencia' : 'Business',
         city: type === 'pickup' ? 'Lindenhurst' : 'Copiague',
         time: nowStr,
+        capturedAt,
       });
       setLoading(false);
     }
@@ -146,10 +151,15 @@ export default function DailyEntry() {
       gross: grossTotal,
       net: netPayout,
       net_payout: netPayout,
-      pickup_time: pickup ? new Date().toISOString() : null,
-      dropoff_time: dropoff ? new Date().toISOString() : null,
+      // Hora capturada EXACTAMENTE al presionar el botón GPS (no al guardar)
+      pickup_time: pickup?.capturedAt ?? null,
+      dropoff_time: dropoff?.capturedAt ?? null,
       pickup_gps: pickup ? { name: pickup.name, city: pickup.city, lat: pickup.lat, lng: pickup.lng, type: pickup.type, address: pickup.fullAddress } : null,
       dropoff_gps: dropoff ? { name: dropoff.name, city: dropoff.city, lat: dropoff.lat, lng: dropoff.lng, type: dropoff.type, address: dropoff.fullAddress } : null,
+      pickup_name: pickup?.name ?? null,
+      dropoff_name: dropoff?.name ?? null,
+      pickup_address: pickup?.fullAddress ?? (pickup ? `${pickup.name}, ${pickup.city}` : null),
+      dropoff_address: dropoff?.fullAddress ?? (dropoff ? `${dropoff.name}, ${dropoff.city}` : null),
       trip_notes: ref ? `Ref: ${ref}` : '',
       status: 'pending'
     };

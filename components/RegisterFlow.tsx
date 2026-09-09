@@ -26,7 +26,7 @@ import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { logoFor } from '@/lib/logos';
 import Link from 'next/link';
-import { getLocalTrips, deleteLocalTrip, updateLocalTrip, LocalTrip } from '@/lib/localStore';
+import { getLocalTrips, deleteLocalTrip, updateLocalTrip, mergeRemoteTrips, LocalTrip } from '@/lib/localStore';
 import { syncTripsWithSupabase } from '@/lib/syncManager';
 
 interface LocationInfo {
@@ -92,11 +92,25 @@ export default function RegisterFlow() {
       const syncResult = await syncTripsWithSupabase();
       console.log('[RegisterFlow] Sync result:', syncResult);
 
-      // 3. Recargar datos locales después del sync (pueden tener nuevos IDs)
+      // 3. Traer los viajes del servidor (select *) y fusionar los que falten localmente
+      const { data: remoteTrips, error: remoteError } = await supabase
+        .from('trips')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (remoteError) {
+        console.warn('[RegisterFlow] Error trayendo viajes de Supabase (usando locales):', remoteError.message);
+      } else if (remoteTrips && remoteTrips.length > 0) {
+        const imported = mergeRemoteTrips(remoteTrips);
+        if (imported > 0) {
+          console.log(`[RegisterFlow] ${imported} viajes importados desde Supabase`);
+        }
+      }
+
+      // 4. Recargar datos locales después del sync/merge (pueden tener nuevos IDs)
       const updatedTrips = getLocalTrips();
       setTrips((updatedTrips as TripItem[]) || []);
 
-      // 4. Mostrar aviso si hay trips pendientes de sync
+      // 5. Mostrar aviso si hay trips pendientes de sync
       const pendingCount = updatedTrips.filter(t => t.sync_status === 'local' || t.sync_status === 'error').length;
       if (pendingCount > 0) {
         console.log(`[RegisterFlow] ${pendingCount} trips pendientes de sincronización`);
