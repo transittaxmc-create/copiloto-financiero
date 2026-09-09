@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { 
   Camera, 
   Briefcase, 
@@ -16,22 +16,11 @@ import {
   Wrench, 
   Shield, 
   Smartphone,
-  Sparkles
+  CloudOff
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useLocalExpenses } from '@/hooks/useLocalExpenses';
+import type { LocalExpense } from '@/lib/localStore';
 import BottomNav from './BottomNav';
-
-interface ExpenseItem {
-  id: string;
-  merchant: string;
-  amount: number;
-  category: string;
-  date: string;
-  is_business: boolean;
-  notes?: string;
-  receipt_url?: string;
-  created_at: string;
-}
 
 const CATEGORIES = [
   { id: 'gas', label: 'Gasolina', icon: Fuel },
@@ -42,8 +31,7 @@ const CATEGORIES = [
 ];
 
 export default function Expenses() {
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { expenses, loading, addExpense, deleteExpense, pendingCount } = useLocalExpenses();
   const [filter, setFilter] = useState<'all' | 'business' | 'personal'>('all');
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -55,7 +43,6 @@ export default function Expenses() {
   const [isBusiness, setIsBusiness] = useState(true);
   const [notes, setNotes] = useState('');
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -63,28 +50,6 @@ export default function Expenses() {
     setToast({ text, type });
     setTimeout(() => setToast(null), 3000);
   };
-
-  const fetchExpenses = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setExpenses((data as ExpenseItem[]) || []);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar gastos';
-      showToast(msg, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -108,58 +73,32 @@ export default function Expenses() {
       return;
     }
 
-    setSaving(true);
-    try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .insert({
-          merchant: merchant.trim(),
-          amount: amt,
-          category,
-          is_business: isBusiness,
-          notes: notes.trim() || null,
-          receipt_url: receiptPreview || null,
-          date: new Date().toISOString().split('T')[0]
-        })
-        .select()
-        .single();
+    // Offline-first: guardar localmente al instante; syncManager envía a Supabase en segundo plano
+    addExpense({
+      merchant: merchant.trim(),
+      amount: amt,
+      category,
+      is_business: isBusiness,
+      notes: notes.trim() || null,
+      receipt_url: receiptPreview || null,
+      date: new Date().toISOString().split('T')[0],
+    });
 
-      if (error) throw error;
-
-      if (data) {
-        setExpenses(prev => [data as ExpenseItem, ...prev]);
-      }
-
-      showToast('✓ Gasto guardado correctamente en Supabase');
-      setShowModal(false);
-      // Reset form
-      setMerchant('');
-      setAmount('');
-      setCategory('gas');
-      setIsBusiness(true);
-      setNotes('');
-      setReceiptPreview(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al guardar gasto';
-      showToast(msg, 'error');
-    } finally {
-      setSaving(false);
-    }
+    showToast('✓ Gasto guardado (se sincroniza automáticamente)');
+    setShowModal(false);
+    // Reset form
+    setMerchant('');
+    setAmount('');
+    setCategory('gas');
+    setIsBusiness(true);
+    setNotes('');
+    setReceiptPreview(null);
   };
 
-  const handleDeleteExpense = async (id: string) => {
+  const handleDeleteExpense = (id: string) => {
     if (!window.confirm('¿Deseas eliminar este gasto?')) return;
-
-    try {
-      const { error } = await supabase.from('expenses').delete().eq('id', id);
-      if (error) throw error;
-
-      setExpenses(prev => prev.filter(e => e.id !== id));
-      showToast('Gasto eliminado');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al eliminar';
-      showToast(msg, 'error');
-    }
+    deleteExpense(id); // local siempre; si viene del servidor, borra en Supabase (best-effort)
+    showToast('Gasto eliminado');
   };
 
   const totalBusiness = expenses
@@ -252,6 +191,14 @@ export default function Expenses() {
         </div>
       </button>
 
+      {/* Pendientes de sincronización */}
+      {pendingCount > 0 && (
+        <div className="flex items-center gap-2 mb-4 bg-[#1E293B] border border-yellow-500/40 rounded-xl px-3.5 py-2.5 text-xs text-yellow-400">
+          <CloudOff size={14} className="shrink-0" />
+          {pendingCount} gasto(s) pendiente(s) de sincronizar — se enviarán automáticamente al recuperar conexión.
+        </div>
+      )}
+
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-4">
         <button
@@ -290,7 +237,7 @@ export default function Expenses() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400">
           <RefreshCw size={26} className="animate-spin text-green-400 mb-2" />
-          <p className="text-sm">Cargando gastos desde Supabase...</p>
+          <p className="text-sm">Cargando gastos...</p>
         </div>
       ) : filteredExpenses.length === 0 ? (
         <div className="bg-[#1E293B] rounded-2xl p-8 border border-gray-700 text-center my-4">
@@ -318,7 +265,7 @@ export default function Expenses() {
                 <div>
                   <p className="font-bold text-sm text-white">{exp.merchant}</p>
                   <p className="text-xs text-gray-400">
-                    {exp.date} · {exp.category || 'Gasto'}
+                    {exp.date} · {CATEGORIES.find(c => c.id === exp.category)?.label || 'Gasto'}
                   </p>
                   {exp.notes && <p className="text-[11px] text-gray-500 italic mt-0.5">{exp.notes}</p>}
                 </div>
@@ -336,6 +283,11 @@ export default function Expenses() {
                   >
                     {exp.is_business ? '[BUSINESS]' : '[PERSONAL]'}
                   </span>
+                  {exp.sync_status !== 'synced' && (
+                    <p className="text-[9px] text-yellow-500 mt-0.5 flex items-center justify-end gap-1">
+                      <CloudOff size={9} /> sin sincronizar
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleDeleteExpense(exp.id)}
@@ -485,10 +437,9 @@ export default function Expenses() {
               <button
                 type="button"
                 onClick={handleSaveExpense}
-                disabled={saving}
                 className="flex-1 bg-green-400 text-black py-3 rounded-xl font-bold text-sm hover:bg-green-300 transition-colors"
               >
-                {saving ? 'Guardando...' : 'Guardar Gasto'}
+                Guardar Gasto
               </button>
             </div>
           </div>

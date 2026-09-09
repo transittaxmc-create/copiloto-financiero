@@ -3,7 +3,14 @@
 // =============================================================
 
 import { supabase } from './supabase';
-import { getPendingSyncTrips, markTripSynced, markTripError, LocalTrip } from './localStore';
+import {
+  getPendingSyncTrips,
+  markTripSynced,
+  markTripError,
+  getPendingSyncExpenses,
+  markExpenseSynced,
+  markExpenseError,
+} from './localStore';
 
 export async function syncTripsWithSupabase(): Promise<{ synced: number; errors: number }> {
   const pending = getPendingSyncTrips();
@@ -62,14 +69,14 @@ export async function syncTripsWithSupabase(): Promise<{ synced: number; errors:
 }
 
 // Auto-sync cada 30 segundos cuando hay conexión
-let syncInterval: NodeJS.Timeout | null = null;
+let syncInterval: ReturnType<typeof setInterval> | null = null;
 
 export function startAutoSync(intervalMs: number = 30000) {
   if (syncInterval) clearInterval(syncInterval);
   
   syncInterval = setInterval(async () => {
     if (navigator.onLine) {
-      await syncTripsWithSupabase();
+      await syncAll();
     }
   }, intervalMs);
   
@@ -90,6 +97,66 @@ export function setupOnlineListener() {
   
   window.addEventListener('online', async () => {
     console.log('[SyncManager] Conexión recuperada, iniciando sync...');
-    await syncTripsWithSupabase();
+    await syncAll();
   });
+}
+
+// =============================================================
+// EXPENSES - Sincronización Offline-First
+// =============================================================
+
+export async function syncExpensesWithSupabase(): Promise<{ synced: number; errors: number }> {
+  const pending = getPendingSyncExpenses();
+  let syncedCount = 0;
+  let errorCount = 0;
+
+  if (pending.length === 0) {
+    console.log('[SyncManager] No hay gastos pendientes de sincronización');
+    return { synced: 0, errors: 0 };
+  }
+
+  console.log(`[SyncManager] Intentando sincronizar ${pending.length} gastos...`);
+
+  for (const expense of pending) {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert({
+          merchant: expense.merchant,
+          amount: expense.amount,
+          category: expense.category,
+          is_business: expense.is_business,
+          notes: expense.notes,
+          receipt_url: expense.receipt_url,
+          date: expense.date,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[SyncManager] Error al sincronizar gasto:', expense.id, error);
+        markExpenseError(expense.id, error.message);
+        errorCount++;
+      } else {
+        markExpenseSynced(expense.id, data.id);
+        syncedCount++;
+        console.log('[SyncManager] Gasto sincronizado exitosamente:', data.id);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error de conexión';
+      console.error('[SyncManager] Error inesperado (gasto):', err);
+      markExpenseError(expense.id, message);
+      errorCount++;
+    }
+  }
+
+  console.log(`[SyncManager] Sync gastos completado: ${syncedCount} synced, ${errorCount} errors`);
+  return { synced: syncedCount, errors: errorCount };
+}
+
+// Sync combinado (trips + expenses)
+export async function syncAll(): Promise<{ synced: number; errors: number }> {
+  const trips = await syncTripsWithSupabase();
+  const expenses = await syncExpensesWithSupabase();
+  return { synced: trips.synced + expenses.synced, errors: trips.errors + expenses.errors };
 }
