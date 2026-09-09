@@ -191,6 +191,7 @@ export default function RegisterFlow() {
 
   const handleSaveEdit = async () => {
     if (!editingTrip) return;
+    if (!window.confirm('¿Confirmas los cambios en este viaje?')) return;
     setSavingEdit(true);
 
     const grossNum = parseFloat(editGross) || 0;
