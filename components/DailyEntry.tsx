@@ -205,6 +205,8 @@ export default function DailyEntry() {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const formattedDate = currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const formattedTime = currentTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  // Fecha corta para las casillas GPS (ej. "Sep 8") a partir de la hora exacta de captura
+  const boxDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null);
 
   const grossVal = parseFloat(gross) || 0;
   const tipsVal = parseFloat(tips) || 0;
@@ -370,7 +372,7 @@ export default function DailyEntry() {
             </span>
           </div>
           <div className="text-[11px] text-slate-400 truncate">
-            {pickup ? `${pickup.time} · ${pickup.city}` : 'Toca el botón verde'}
+            {pickup ? [boxDate(pickup.capturedAt), pickup.time, pickup.city].filter(Boolean).join(' · ') : 'Toca el botón verde'}
           </div>
         </div>
 
@@ -388,7 +390,7 @@ export default function DailyEntry() {
             </span>
           </div>
           <div className="text-[11px] text-slate-400 truncate">
-            {dropoff ? `${dropoff.time} · ${dropoff.city}` : 'Toca el botón azul'}
+            {dropoff ? [boxDate(dropoff.capturedAt), dropoff.time, dropoff.city].filter(Boolean).join(' · ') : 'Toca el botón azul'}
           </div>
         </div>
       </div>

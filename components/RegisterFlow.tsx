@@ -16,6 +16,8 @@ import {
   X, 
   Check, 
   AlertCircle,
+  Store,
+  Home,
   TrendingUp,
   Cloud,
   CloudOff,
@@ -35,6 +37,7 @@ interface LocationInfo {
   address?: string;
   lat?: number;
   lng?: number;
+  type?: string;
 }
 
 interface TripItem {
@@ -44,6 +47,10 @@ interface TripItem {
   dropoff_time: string | null;
   pickup_gps: LocationInfo | null;
   dropoff_gps: LocationInfo | null;
+  pickup_name?: string | null;
+  dropoff_name?: string | null;
+  pickup_address?: string | null;
+  dropoff_address?: string | null;
   earnings: number;
   tips: number;
   tolls: number;
@@ -642,8 +649,23 @@ export default function RegisterFlow() {
                 </h4>
                 <div className="mb-2">
                   <p className="text-[10px] text-green-400 font-semibold mb-1">PICKUP</p>
-                  <p className="text-xs text-white font-medium">{editingTrip.pickup_gps?.name || 'N/A'}</p>
-                  <p className="text-[11px] text-gray-400">{editingTrip.pickup_gps?.address || editingTrip.pickup_gps?.city || ''}</p>
+                  <div className="flex items-center gap-1 mb-0.5">
+                    {editingTrip.pickup_gps?.type === 'business' ? (
+                      <Store size={11} className="text-amber-400 shrink-0" />
+                    ) : (
+                      <Home size={11} className="text-gray-400 shrink-0" />
+                    )}
+                    <span className="text-[10px] text-gray-400 font-semibold">
+                      {editingTrip.pickup_gps?.type === 'business' ? 'Business' : editingTrip.pickup_gps?.type === 'residence' ? 'Residencia' : 'GPS'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white font-medium">{editingTrip.pickup_gps?.name || editingTrip.pickup_name || 'N/A'}</p>
+                  {(editingTrip.pickup_gps?.address || editingTrip.pickup_address) && (
+                    <p className="text-[11px] text-gray-400">{editingTrip.pickup_gps?.address || editingTrip.pickup_address}</p>
+                  )}
+                  {editingTrip.pickup_gps?.city && editingTrip.pickup_gps?.address !== editingTrip.pickup_gps?.city && (
+                    <p className="text-[11px] text-gray-500">{editingTrip.pickup_gps.city}</p>
+                  )}
                   {editingTrip.pickup_gps?.lat && (
                     <span className="text-[10px] text-gray-500">📍 {editingTrip.pickup_gps.lat.toFixed(5)}, {editingTrip.pickup_gps.lng?.toFixed(5)}</span>
                   )}
@@ -653,8 +675,23 @@ export default function RegisterFlow() {
                 </div>
                 <div>
                   <p className="text-[10px] text-blue-400 font-semibold mb-1">DROPOFF</p>
-                  <p className="text-xs text-white font-medium">{editingTrip.dropoff_gps?.name || 'N/A'}</p>
-                  <p className="text-[11px] text-gray-400">{editingTrip.dropoff_gps?.address || editingTrip.dropoff_gps?.city || ''}</p>
+                  <div className="flex items-center gap-1 mb-0.5">
+                    {editingTrip.dropoff_gps?.type === 'business' ? (
+                      <Store size={11} className="text-amber-400 shrink-0" />
+                    ) : (
+                      <Home size={11} className="text-gray-400 shrink-0" />
+                    )}
+                    <span className="text-[10px] text-gray-400 font-semibold">
+                      {editingTrip.dropoff_gps?.type === 'business' ? 'Business' : editingTrip.dropoff_gps?.type === 'residence' ? 'Residencia' : 'GPS'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white font-medium">{editingTrip.dropoff_gps?.name || editingTrip.dropoff_name || 'N/A'}</p>
+                  {(editingTrip.dropoff_gps?.address || editingTrip.dropoff_address) && (
+                    <p className="text-[11px] text-gray-400">{editingTrip.dropoff_gps?.address || editingTrip.dropoff_address}</p>
+                  )}
+                  {editingTrip.dropoff_gps?.city && editingTrip.dropoff_gps?.address !== editingTrip.dropoff_gps?.city && (
+                    <p className="text-[11px] text-gray-500">{editingTrip.dropoff_gps.city}</p>
+                  )}
                   {editingTrip.dropoff_gps?.lat && (
                     <span className="text-[10px] text-gray-500">📍 {editingTrip.dropoff_gps.lat.toFixed(5)}, {editingTrip.dropoff_gps.lng?.toFixed(5)}</span>
                   )}
