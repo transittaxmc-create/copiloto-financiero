@@ -1,0 +1,62 @@
+{
+  "seed": "evals/apo/seed-prompt.md",
+  "checks": [
+    {
+      "id": "stack-nextjs",
+      "ok": true,
+      "why": "declara el stack real del repo"
+    },
+    {
+      "id": "no-python-ghost",
+      "ok": true,
+      "why": "no hereda el stack fantasma Python del framework genérico"
+    },
+    {
+      "id": "money-numeric",
+      "ok": true,
+      "why": "regla de dinero (centavos/NUMERIC, nunca float)"
+    },
+    {
+      "id": "zod-validation",
+      "ok": true,
+      "why": "validación de payloads con Zod"
+    },
+    {
+      "id": "zero-trust",
+      "ok": true,
+      "why": "regla de seguridad no negociable"
+    },
+    {
+      "id": "secrets-env",
+      "ok": true,
+      "why": "secretos solo por env"
+    },
+    {
+      "id": "anti-fabrication",
+      "ok": true,
+      "why": "cláusula anti-alucinación"
+    },
+    {
+      "id": "uncert-cot",
+      "ok": true,
+      "why": "razonamiento guiado por incertidumbre (ya existía, no duplicar)"
+    },
+    {
+      "id": "offline-first",
+      "ok": true,
+      "why": "arquitectura real de este repo (localStorage → syncManager)"
+    },
+    {
+      "id": "lean",
+      "ok": true,
+      "why": "seed lean (≤60 líneas; tiene 36)"
+    }
+  ],
+  "passed": 10,
+  "totalChecks": 10,
+  "gateTypecheck": "PASS",
+  "score": 12,
+  "maxScore": 12,
+  "verdict": "PASS",
+  "generatedAt": "2026-09-09T02:15:29.928Z"
+}

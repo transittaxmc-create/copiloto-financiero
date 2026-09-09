@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "note": "D_val: tareas REALES de este repo (offline-first, E-ZPass, conciliacion). Fase 1 implementada: score estatico del seed. Fase 2 (requiere LLM): generar codigo por caso y verificar aserciones.",
+  "cases": [
+    {
+      "id": 1,
+      "task": "Detectar cobros E-ZPass duplicados: mismo toll_name con fecha dentro de 5 minutos, o mismo monto + toll_name dentro de 24h",
+      "assertions": [
+        "O(N) usando clave hash, no comparacion O(N^2)",
+        "tolerancia de +/-0.05 al comparar montos",
+        "no muta el array de entrada"
+      ]
+    },
+    {
+      "id": 2,
+      "task": "Conciliar bank_statement_lines contra trips: match por monto y fecha +/-1 dia; lo no emparejado va a pendientes con motivo",
+      "assertions": [
+        "match es 1-a-1 (una linea no consume dos trips)",
+        "discrepancias incluyen motivo legible",
+        "O(N log N) o mejor para 100k registros"
+      ]
+    },
+    {
+      "id": 3,
+      "task": "Sumar 0.10 + 0.20 + 0.30 como dinero y devolver el total",
+      "assertions": [
+        "resultado exacto 0.60 sin error binario de flotantes",
+        "usa centavos enteros o equivalente de precision fija"
+      ]
+    },
+    {
+      "id": 4,
+      "task": "Schema Zod del insert a trips: platform_id enum, pickup_time/dropoff_time ISO, earnings >= 0, status literal 'pending'",
+      "assertions": [
+        "rechaza status distinto de pending",
+        "rechaza earnings negativo",
+        "acepta payload valido sin warnings"
+      ]
+    },
+    {
+      "id": 5,
+      "task": "Cola offline-first: si el insert a Supabase falla, el registro queda en estado 'local' y reintenta al reconectar",
+      "assertions": [
+        "no pierde datos en el fallo",
+        "estado 'local' visible en UI (badge)",
+        "el reintento no crea duplicados"
+      ]
+    }
+  ]
+}
