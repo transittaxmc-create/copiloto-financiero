@@ -23,7 +23,8 @@ import {
   CloudOff,
   Wifi,
   WifiOff,
-  Eraser
+  Eraser,
+  ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
