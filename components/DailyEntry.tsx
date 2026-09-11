@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { useState, useEffect } from 'react';
-import { MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight, Cloud, CloudOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight, Cloud, CloudOff, LogIn, LogOut, Route } from 'lucide-react';
+import { distance as haversineMiles } from '@/lib/geo';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { PLATFORMS, logoFor } from '@/lib/logos';
@@ -11,6 +12,29 @@ import { getCategoryIcon } from '@/lib/category-icons';
 import dynamic from 'next/dynamic';
 
 const PinAdjustModal = dynamic(() => import('./PinAdjustModal'), { ssr: false });
+
+// ── Persistencia de turno y borrador (sobrevive a la navegación entre páginas) ──
+const DRAFT_KEY = 'copiloto_entry_draft';
+const SHIFT_KEY = 'copiloto_shift';
+
+interface ShiftState {
+  clockedIn: boolean;
+  clockInAt: string | null;
+  onBreak: boolean;
+  miles: number;
+}
+
+interface DraftState {
+  platform: string;
+  gross: string;
+  tips: string;
+  tolls: string;
+  fee: string;
+  ref: string;
+  pickup: LocationPoint | null;
+  dropoff: LocationPoint | null;
+  gpsWarning: boolean;
+}
 
 interface LocationPoint {
   name: string;
@@ -42,6 +66,11 @@ export default function DailyEntry() {
   const [onBreak, setOnBreak] = useState(false);
   const [gpsWarning, setGpsWarning] = useState(false);
   const [pinModal, setPinModal] = useState<{ target: 'pickup' | 'dropoff' } | null>(null);
+  const [isClockedIn, setIsClockedIn] = useState(false);
+  const [clockInAt, setClockInAt] = useState<string | null>(null);
+  const [miles, setMiles] = useState(0);
+  const watchIdRef = useRef<number | null>(null);
+  const lastPosRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Fecha y hora dinámica
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -74,6 +103,97 @@ export default function DailyEntry() {
 
     return () => clearInterval(timer);
   }, []);
+
+  // ── Restaurar turno + borrador al montar (nada se pierde al navegar) ──
+  useEffect(() => {
+    try {
+      const sRaw = localStorage.getItem(SHIFT_KEY);
+      if (sRaw) {
+        const sh = JSON.parse(sRaw) as ShiftState;
+        setIsClockedIn(!!sh.clockedIn);
+        setClockInAt(sh.clockInAt ?? null);
+        setOnBreak(!!sh.onBreak);
+        setMiles(sh.miles ?? 0);
+      }
+      const dRaw = localStorage.getItem(DRAFT_KEY);
+      if (dRaw) {
+        const d = JSON.parse(dRaw) as Partial<DraftState>;
+        if (d.platform) setPlatform(d.platform);
+        setGross(d.gross ?? '');
+        setTips(d.tips ?? '');
+        setTolls(d.tolls ?? '');
+        setFee(d.fee ?? '');
+        setRef(d.ref ?? '');
+        if (d.pickup) setPickup(d.pickup as LocationPoint);
+        if (d.dropoff) setDropoff(d.dropoff as LocationPoint);
+        setGpsWarning(!!d.gpsWarning);
+        console.log('[DailyEntry] Borrador restaurado: pickup/dropoff y montos intactos tras navegar');
+      }
+    } catch (e) {
+      console.error('[DailyEntry] Error restaurando turno/borrador:', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Autoguardado del borrador en cada cambio (sobrevive a la navegación) ──
+  useEffect(() => {
+    try {
+      const hasContent = !!(gross || tips || tolls || fee || ref || pickup || dropoff || platform !== 'Uber');
+      if (!hasContent) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      const draft: DraftState = { platform, gross, tips, tolls, fee, ref, pickup, dropoff, gpsWarning };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [platform, gross, tips, tolls, fee, ref, pickup, dropoff, gpsWarning]);
+
+  // ── Persistencia del turno (Clock In/Out + Break + millas sobreviven a la navegación) ──
+  useEffect(() => {
+    try {
+      const sh: ShiftState = { clockedIn: isClockedIn, clockInAt, onBreak, miles };
+      localStorage.setItem(SHIFT_KEY, JSON.stringify(sh));
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [isClockedIn, clockInAt, onBreak, miles]);
+
+  // ── Contador de millas: activo solo entre Clock In y Clock Out (pausa en Break) ──
+  useEffect(() => {
+    if (!isClockedIn || onBreak || typeof navigator === 'undefined' || !navigator.geolocation) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+        lastPosRef.current = null;
+      }
+      return;
+    }
+    lastPosRef.current = null;
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const cur = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const prev = lastPosRef.current;
+        lastPosRef.current = cur;
+        // Ignora el primer punto y saltos GPS absurdos (>2 millas entre lecturas = ruido)
+        if (!prev) return;
+        const d = haversineMiles(prev, cur);
+        if (d > 0.01 && d < 2) setMiles((m) => m + d);
+      },
+      () => {
+        /* GPS no disponible durante el turno: el contador simplemente se detiene */
+      },
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 15000 }
+    );
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      lastPosRef.current = null;
+    };
+  }, [isClockedIn, onBreak]);
 
   const captureLocation = (type: 'pickup' | 'dropoff') => {
     const setLoading = type === 'pickup' ? setIsLocatingPickup : setIsLocatingDropoff;
@@ -197,7 +317,7 @@ export default function DailyEntry() {
         setFeedback({ text: '✓ Trip guardado exitosamente', type: 'success' });
       }
 
-      // 4. Limpiar formulario
+      // 4. Limpiar formulario (y advertencia GPS obsoleta del viaje anterior)
       setGross('');
       setTips('');
       setTolls('');
@@ -205,6 +325,7 @@ export default function DailyEntry() {
       setRef('');
       setPickup(null);
       setDropoff(null);
+      setGpsWarning(false);
       setTimeout(() => setFeedback(null), 3500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error desconocido al guardar';
@@ -213,6 +334,40 @@ export default function DailyEntry() {
       setTimeout(() => setFeedback(null), 4000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ── Turno: Clock In / Clock Out (arranca y detiene el contador de millas) ──
+  const handleClockIn = () => {
+    if (isClockedIn) return;
+    setIsClockedIn(true);
+    setClockInAt(new Date().toISOString());
+    setOnBreak(false);
+    setMiles(0); // turno nuevo = contador de millas desde cero
+  };
+
+  const handleClockOut = () => {
+    if (miles > 0) {
+      console.log(`[DailyEntry] Turno cerrado: ${miles.toFixed(1)} millas desde ${clockInAt}`);
+    }
+    setIsClockedIn(false);
+    setClockInAt(null);
+    setOnBreak(false);
+    setMiles(0);
+    // Fin de turno: limpiar borrador y formulario (turno nuevo = pizarra limpia)
+    setGross('');
+    setTips('');
+    setTolls('');
+    setFee('');
+    setRef('');
+    setPickup(null);
+    setDropoff(null);
+    setGpsWarning(false);
+    setPinModal(null);
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* noop */
     }
   };
 
@@ -273,21 +428,20 @@ export default function DailyEntry() {
         </div>
       </div>
 
-      {/* Selector de Plataforma & Modo Break */}
-      <div className="flex gap-2">
-        <div className="flex-1 relative">
+      {/* Fila compacta: Plataforma | Clock In | Clock Out | Break */}
+      <div className="flex gap-1.5 items-stretch">
+        <div className="flex-1 min-w-0 relative">
           <button
             type="button"
             onClick={() => setShowPlatforms(!showPlatforms)}
-            className="w-full bg-[#1E293B] rounded-xl border border-slate-700/80 p-3 flex items-center justify-between hover:border-slate-500 transition-colors shadow-sm"
+            className="w-full bg-[#1E293B] rounded-xl border border-slate-700/80 px-2 py-2 flex items-center justify-between hover:border-slate-500 transition-colors shadow-sm min-w-0"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Plataforma:</span>
+            <div className="flex items-center gap-1.5 min-w-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoFor(platform)} alt={platform} className="w-6 h-6 rounded-full object-contain" />
-              <span className="font-semibold text-sm text-slate-100">{platform}</span>
+              <img src={logoFor(platform)} alt={platform} className="w-5 h-5 rounded-full object-contain shrink-0" />
+              <span className="font-semibold text-xs text-slate-100 truncate">{platform}</span>
             </div>
-            <ChevronDown size={16} className={`text-slate-400 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
+            <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
           </button>
 
           {showPlatforms && (
@@ -316,19 +470,71 @@ export default function DailyEntry() {
           )}
         </div>
 
+        {/* Clock In: inicia turno (verde neón cuando activo) */}
+        <button
+          type="button"
+          onClick={handleClockIn}
+          disabled={isClockedIn}
+          className={`px-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm shrink-0 ${
+            isClockedIn
+              ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-emerald-500/25'
+              : 'bg-slate-800/60 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10'
+          }`}
+        >
+          <LogIn size={14} />
+          <span>{isClockedIn ? 'Activo' : 'In'}</span>
+        </button>
+
+        {/* Clock Out: cierra turno y limpia el formulario */}
+        <button
+          type="button"
+          onClick={handleClockOut}
+          disabled={!isClockedIn}
+          className={`px-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm shrink-0 ${
+            isClockedIn
+              ? 'bg-slate-800/60 border-red-500/50 text-red-400 hover:bg-red-500/10'
+              : 'bg-slate-900/60 border-slate-700/50 text-slate-600 cursor-not-allowed'
+          }`}
+        >
+          <LogOut size={14} />
+          <span>Out</span>
+        </button>
+
+        {/* Break: pausa dentro del turno */}
         <button
           type="button"
           onClick={() => setOnBreak(!onBreak)}
-          className={`px-3.5 rounded-xl flex items-center gap-1.5 border text-xs font-semibold transition-all shadow-sm ${
+          disabled={!isClockedIn}
+          className={`px-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm shrink-0 ${
             onBreak
-              ? 'bg-amber-500 text-slate-950 border-amber-500 font-bold shadow-amber-500/20'
-              : 'bg-slate-800/60 border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
+              ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-amber-500/20'
+              : isClockedIn
+                ? 'bg-slate-800/60 border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
+                : 'bg-slate-900/60 border-slate-700/50 text-slate-600 cursor-not-allowed'
           }`}
         >
-          <Coffee size={15} />
-          <span>{onBreak ? 'En pausa' : 'Break'}</span>
+          <Coffee size={14} />
+          <span>{onBreak ? 'Pausa' : 'Break'}</span>
         </button>
       </div>
+
+      {/* Aviso sutil de turno activo con hora de inicio + millas del turno */}
+      {isClockedIn && clockInAt && (
+        <div className="flex items-center justify-between text-[11px] font-medium px-1">
+          <span className="flex items-center gap-1.5 text-emerald-400/90">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            Turno activo desde las {new Date(clockInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            {onBreak && <span className="text-amber-400 ml-1">· En pausa</span>}
+          </span>
+          <span className="flex items-center gap-1 text-slate-300 font-semibold">
+            <Route size={12} className="text-emerald-400" />
+            {miles.toFixed(1)} mi
+          </span>
+        </div>
+      )}
 
       {/* Entradas Financieras: Gross Fare & Ref */}
       <div className="grid grid-cols-2 gap-2.5">

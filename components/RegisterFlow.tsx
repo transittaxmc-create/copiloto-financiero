@@ -22,13 +22,14 @@ import {
   Cloud,
   CloudOff,
   Wifi,
-  WifiOff
+  WifiOff,
+  Eraser
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { logoFor } from '@/lib/logos';
 import Link from 'next/link';
-import { getLocalTrips, deleteLocalTrip, updateLocalTrip, mergeRemoteTrips, LocalTrip } from '@/lib/localStore';
+import { getLocalTrips, deleteLocalTrip, updateLocalTrip, mergeRemoteTrips, saveLocalTrips, LocalTrip } from '@/lib/localStore';
 import { syncTripsWithSupabase } from '@/lib/syncManager';
 
 interface LocationInfo {
@@ -70,6 +71,8 @@ export default function RegisterFlow() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'reconciled' | 'in_ledger'>('all');
+  const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [resetting, setResetting] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Modal de edición
@@ -256,6 +259,37 @@ export default function RegisterFlow() {
     }
   };
 
+  // ── Reset total: borra TODO (local + nube) y vuelve a descargar desde cero ──
+  const handleResetAll = async () => {
+    if (!window.confirm('⚠️ RESET TOTAL\n\nSe borrarán TODOS los viajes del registro (local y nube) para empezar desde cero.\n\n¿Continuar?')) return;
+    if (!window.confirm('ÚLTIMA CONFIRMACIÓN\n\nEsta acción NO se puede deshacer.\n\n¿Borrar todo el registro ahora?')) return;
+    setResetting(true);
+    try {
+      // 1. Borrar todos los viajes en la nube (neq garantiza que el WHERE aplique a todas las filas)
+      const { error } = await supabase
+        .from('trips')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) {
+        console.warn('[RegisterFlow] Error borrando en Supabase:', error);
+      } else {
+        console.log('[RegisterFlow] Viajes borrados de Supabase');
+      }
+      // 2. Borrar todo lo local
+      saveLocalTrips([]);
+      setTrips([]);
+      setPlatformFilter('all');
+      showToast('✓ Registro reiniciado. Descargando datos frescos...');
+      // 3. Reset & pull: re-descargar desde el servidor (quedará vacío, estado limpio)
+      await fetchTrips();
+    } catch (err) {
+      console.error('[RegisterFlow] Error en reset:', err);
+      showToast('Error durante el reset. Revisa la conexión.', 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const filteredTrips = trips.filter(t => {
     if (filter === 'all') return true;
     const normStatus = (t.status || 'pending').toLowerCase();
@@ -263,7 +297,7 @@ export default function RegisterFlow() {
     if (filter === 'reconciled') return normStatus === 'reconciled';
     if (filter === 'in_ledger') return normStatus === 'in_ledger' || normStatus === 'en_ledger';
     return true;
-  });
+  }).filter(t => platformFilter === 'all' || (t.platform_id || '').toLowerCase() === platformFilter);
 
   // Agrupación por plataforma (con logo en el header del grupo)
   const groups = new Map<string, TripItem[]>();
@@ -272,6 +306,18 @@ export default function RegisterFlow() {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(t);
   });
+
+  // Reporte por plataforma (solo las usadas): total gross y net para reconciliar cada pago
+  const platformTotals = new Map<string, { count: number; gross: number; net: number }>();
+  trips.forEach((t) => {
+    const key = (t.platform_id || 'viaje').toLowerCase().trim() || 'viaje';
+    const cur = platformTotals.get(key) ?? { count: 0, gross: 0, net: 0 };
+    cur.count += 1;
+    cur.gross += Number(t.gross) || 0;
+    cur.net += Number(t.net_payout || t.net) || 0;
+    platformTotals.set(key, cur);
+  });
+  const platformList = [...platformTotals.entries()].sort((a, b) => b[1].gross - a[1].gross);
 
   const totalGross = trips.reduce((sum, t) => sum + (Number(t.gross) || 0), 0);
   const totalNet = trips.reduce((sum, t) => sum + (Number(t.net_payout || t.net) || 0), 0);
@@ -319,15 +365,46 @@ export default function RegisterFlow() {
           <h1 className="text-2xl font-bold">Registro de Viajes</h1>
           <p className="text-xs text-gray-400 mt-0.5">Flujo: Captura → Reconciliación → Ledger</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="p-2.5 bg-[#1E293B] border border-gray-700 rounded-xl hover:border-gray-500 transition-colors active:scale-95"
-          title="Recargar viajes"
-        >
-          <RefreshCw size={18} className={`text-gray-300 ${refreshing ? 'animate-spin text-green-400' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleResetAll}
+            disabled={resetting}
+            className="p-2.5 bg-[#1E293B] border border-red-500/40 rounded-xl hover:border-red-400 transition-colors active:scale-95 disabled:opacity-50"
+            title="Reset total: borrar todo y empezar de cero"
+          >
+            <Eraser size={18} className={`text-red-400 ${resetting ? 'animate-pulse' : ''}`} />
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2.5 bg-[#1E293B] border border-gray-700 rounded-xl hover:border-gray-500 transition-colors active:scale-95"
+            title="Recargar viajes"
+          >
+            <RefreshCw size={18} className={`text-gray-300 ${refreshing ? 'animate-spin text-green-400' : ''}`} />
+          </button>
+        </div>
       </div>
+
+      {/* Reporte por Plataforma: solo las usadas — para reconciliar cada pago */}
+      {platformList.length > 0 && (
+        <div className="bg-[#1E293B] rounded-2xl p-3.5 border border-gray-700 mb-4">
+          <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+            <Store size={13} className="text-blue-400" /> Total Gross por plataforma (para reconciliar pagos)
+          </p>
+          <div className="space-y-1.5">
+            {platformList.map(([key, v]) => (
+              <div key={key} className="flex items-center gap-2 bg-[#0B132B] rounded-xl px-2.5 py-2 border border-gray-800">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoFor(key)} alt={key} className="w-5 h-5 rounded-full object-contain shrink-0" />
+                <span className="capitalize text-xs font-semibold text-white flex-1 truncate">{key}</span>
+                <span className="text-[10px] text-gray-500">{v.count}v</span>
+                <span className="text-xs font-bold text-green-400">${v.gross.toFixed(2)}</span>
+                <span className="text-[10px] text-gray-500">net ${v.net.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -403,6 +480,37 @@ export default function RegisterFlow() {
           En Ledger ({ledgerCount})
         </button>
       </div>
+
+      {/* Filtro por Plataforma: facilita la reconciliación de cada pago */}
+      {platformList.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
+          <button
+            onClick={() => setPlatformFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+              platformFilter === 'all'
+                ? 'bg-white text-black font-bold'
+                : 'bg-[#1E293B] text-gray-400 border border-gray-700 hover:border-gray-600'
+            }`}
+          >
+            Todas
+          </button>
+          {platformList.map(([key, v]) => (
+            <button
+              key={key}
+              onClick={() => setPlatformFilter(key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors capitalize flex items-center gap-1.5 ${
+                platformFilter === key
+                  ? 'bg-blue-500 text-white font-bold'
+                  : 'bg-[#1E293B] text-gray-400 border border-gray-700 hover:border-gray-600'
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoFor(key)} alt={key} className="w-4 h-4 rounded-full object-contain" />
+              {key} (${v.gross.toFixed(0)})
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Trips List */}
       {loading ? (
