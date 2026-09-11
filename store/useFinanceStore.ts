@@ -7,6 +7,14 @@ import type {
   ObligationInput,
 } from '@/lib/engines/types';
 import { SAFE_MARGIN_DEFAULT } from '@/lib/engines/types';
+import {
+  fetchBills,
+  addBill as ledgerAddBill,
+  updateBill as ledgerUpdateBill,
+  deleteBill as ledgerDeleteBill,
+  pushBankSnapshot,
+  type LedgerBill,
+} from '@/lib/ledger';
 
 export interface IncomePlatform {
   platformName: string;
@@ -73,11 +81,19 @@ interface FinanceState {
   previousBalance: number | null;
   days: DayData[];
   upcomingExpenses: UpcomingExpense[];
+  ledgerBills: LedgerBill[];
+  lastSyncAt: string | null;
+  syncing: boolean;
   setStartingBalance: (balance: number) => void;
   setVerifiedBalance: (amount: number, source?: BankSource) => void;
   toggleWorkingDay: (dayId: string) => void;
   setDayTarget: (dayId: string, target: number) => void;
   markObligationPaid: (id: string, amount?: number, restBalance?: boolean) => void;
+  syncToLedger: () => Promise<void>;
+  loadLedgerBills: () => Promise<void>;
+  addLedgerBill: (bill: Omit<LedgerBill, 'id'>) => Promise<string | null>;
+  updateLedgerBill: (id: string, patch: Partial<Omit<LedgerBill, 'id'>>) => Promise<boolean>;
+  removeLedgerBill: (id: string) => Promise<boolean>;
   isVerifiedToday: () => boolean;
   getObligations: () => ObligationInput[];
   getMinProjectedBalance: () => number;
@@ -144,6 +160,9 @@ export const useFinanceStore = create<FinanceState>()(
       previousBalance: null,
       days: defaultDays,
       upcomingExpenses: defaultExpenses,
+      ledgerBills: [],
+      lastSyncAt: null,
+      syncing: false,
 
       setStartingBalance: (balance) => {
         const amount = Math.max(0, balance);
@@ -161,6 +180,7 @@ export const useFinanceStore = create<FinanceState>()(
           startingBalance: next,
           bankSnapshot: { amount: next, verifiedAt: new Date().toISOString(), source },
         });
+        void get().syncToLedger();
       },
 
       toggleWorkingDay: (dayId) =>
@@ -304,7 +324,6 @@ export const useFinanceStore = create<FinanceState>()(
           (acc, e) => acc + Math.max(0, e.amount - (e.paidAmount ?? 0)),
           0
         );
-        // Prorratea las obligaciones abiertas sobre el horizonte proyectado.
         const weeklyExpense = weeks > 0 ? openBills / weeks : 0;
 
         const points: ProjectionPoint[] = [];
@@ -319,10 +338,64 @@ export const useFinanceStore = create<FinanceState>()(
         }
         return points;
       },
+
+      // ── Ledger sync ──────────────────────────────────────────────────────
+      syncToLedger: async () => {
+        const snap = get().bankSnapshot;
+        const calcBal = get().startingBalance;
+        set({ syncing: true });
+        try {
+          await pushBankSnapshot(snap, calcBal);
+          set({ lastSyncAt: new Date().toISOString(), syncing: false });
+        } catch {
+          set({ syncing: false });
+        }
+      },
+
+      loadLedgerBills: async () => {
+        try {
+          const bills = await fetchBills();
+          set({ ledgerBills: bills });
+        } catch {
+          // keep local state
+        }
+      },
+
+      addLedgerBill: async (bill) => {
+        const res = await ledgerAddBill(bill);
+        if (res.ok && res.id) {
+          const newBill: LedgerBill = { ...bill, id: res.id };
+          set((s) => ({ ledgerBills: [...s.ledgerBills, newBill] }));
+          return res.id;
+        }
+        return null;
+      },
+
+      updateLedgerBill: async (id, patch) => {
+        const res = await ledgerUpdateBill(id, patch);
+        if (res.ok) {
+          set((s) => ({
+            ledgerBills: s.ledgerBills.map((b) =>
+              b.id === id ? { ...b, ...patch } : b
+            ),
+          }));
+        }
+        return res.ok;
+      },
+
+      removeLedgerBill: async (id) => {
+        const res = await ledgerDeleteBill(id);
+        if (res.ok) {
+          set((s) => ({
+            ledgerBills: s.ledgerBills.filter((b) => b.id !== id),
+          }));
+        }
+        return res.ok;
+      },
     }),
     {
       name: 'copiloto_finance_v2',
-      version: 3,
+      version: 4,
       migrate: (persisted: unknown) => {
         const p = (persisted ?? {}) as Partial<FinanceState>;
         const days =
@@ -348,6 +421,9 @@ export const useFinanceStore = create<FinanceState>()(
             p.upcomingExpenses && p.upcomingExpenses.length >= 3
               ? p.upcomingExpenses
               : defaultExpenses,
+          ledgerBills: [],
+          lastSyncAt: null,
+          syncing: false,
         };
       },
     }

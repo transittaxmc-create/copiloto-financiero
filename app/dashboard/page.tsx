@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { useFinanceStore } from "@/store/useFinanceStore";
 import BankAuditSheet from "@/components/BankAuditSheet";
 import FinanceRegisterTable from "@/components/FinanceRegisterTable";
@@ -11,6 +11,8 @@ import PaymentPlanBoard from "@/components/briefing/PaymentPlanBoard";
 import WeekPlanner from "@/components/briefing/WeekPlanner";
 import CashFlowChart from "@/components/briefing/CashFlowChart";
 import IncomeTargetRing from "@/components/briefing/IncomeTargetRing";
+import BillsManager from "@/components/briefing/BillsManager";
+import OcrUpload from "@/components/briefing/OcrUpload";
 import { buildPaymentPlan } from "@/lib/engines/paymentPlanner";
 import { buildBriefingNotes } from "@/lib/engines/copilotPolicy";
 import type { PaymentPlanItem } from "@/lib/engines/types";
@@ -40,6 +42,15 @@ export default function DashboardPage() {
 
   const heroRef = useRef<HTMLDivElement>(null);
   const scheduleRef = useRef<HTMLDivElement>(null);
+  const loadLedgerBills = useFinanceStore((s) => s.loadLedgerBills);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!loaded) {
+      loadLedgerBills();
+      setLoaded(true);
+    }
+  }, [loaded, loadLedgerBills]);
 
   const verified = isVerifiedToday();
   const minProjected = getMinProjectedBalance();
@@ -175,6 +186,11 @@ export default function DashboardPage() {
       </div>
 
       <PaymentPlanBoard plan={plan} onPay={onPay} />
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <BillsManager />
+        <OcrUpload />
+      </section>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-[#1E293B] border border-slate-700/60 rounded-2xl p-4">
