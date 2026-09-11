@@ -1,0 +1,22 @@
+{
+  "name": "Copiloto Financiero · Rideshare",
+  "short_name": "Copiloto",
+  "description": "Captura viajes, audita peajes E-ZPass y reconcilia tus ingresos de Uber/Lyft para maximizar deducciones fiscales.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "lang": "es",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
