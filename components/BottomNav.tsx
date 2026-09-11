@@ -1,4 +1,4 @@
-﻿import { Home, ClipboardList, Receipt, ShieldCheck, BarChart3 } from 'lucide-react';
+﻿import { Home, ClipboardList, Receipt, ShieldCheck, BarChart3, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -8,7 +8,7 @@ export function BottomNav() {
     { href: '/', icon: Home, label: 'Inicio' },
     { href: '/register', icon: ClipboardList, label: 'Viajes' },
     { href: '/expenses', icon: Receipt, label: 'Gastos' },
-    { href: '/ezpass', icon: ShieldCheck, label: 'E-ZPass' },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'CFO' },
     { href: '/reports', icon: BarChart3, label: 'Reportes' },
   ];
 

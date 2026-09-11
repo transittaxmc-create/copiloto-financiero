@@ -1,10 +1,11 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ClipboardList, Camera, TrendingUp, BookOpen, FileText, Settings, User, Sparkles } from "lucide-react";
+import { Home, ClipboardList, Camera, TrendingUp, BookOpen, FileText, Settings, User, Sparkles, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { path: "/", label: "Inicio", icon: Home },
+  { path: "/dashboard", label: "CFO", icon: LayoutDashboard },
   { path: "/register", label: "Register", icon: ClipboardList },
   { path: "/ezpass", label: "E-ZPass", icon: Camera },
   { path: "/growth", label: "Growth", icon: TrendingUp },
