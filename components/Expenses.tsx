@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef } from 'react';
 import { 
@@ -117,7 +117,7 @@ export default function Expenses() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white p-4 pb-28 font-sans">
+    <div className="min-h-screen bg-[#0B132B] text-white p-4 pb-28 font-sans">
       {/* Toast */}
       {toast && (
         <div
@@ -330,7 +330,7 @@ export default function Expenses() {
                 className={`py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
                   isBusiness
                     ? 'bg-green-500 text-black shadow-lg shadow-green-500/20'
-                    : 'bg-[#0F172A] text-gray-400 border border-gray-700'
+                    : 'bg-[#0B132B] text-gray-400 border border-gray-700'
                 }`}
               >
                 <Briefcase size={14} /> [BUSINESS]
@@ -341,7 +341,7 @@ export default function Expenses() {
                 className={`py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
                   !isBusiness
                     ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
-                    : 'bg-[#0F172A] text-gray-400 border border-gray-700'
+                    : 'bg-[#0B132B] text-gray-400 border border-gray-700'
                 }`}
               >
                 <User size={14} /> [PERSONAL]
@@ -358,7 +358,7 @@ export default function Expenses() {
                   placeholder="0.00"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2.5 text-xl font-bold text-white outline-none focus:border-green-400"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2.5 text-xl font-bold text-white outline-none focus:border-green-400"
                 />
               </div>
 
@@ -369,7 +369,7 @@ export default function Expenses() {
                   placeholder="ej. Chevron, AutoZone, Car Wash"
                   value={merchant}
                   onChange={e => setMerchant(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400 text-sm"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400 text-sm"
                 />
               </div>
 
@@ -378,7 +378,7 @@ export default function Expenses() {
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400 text-sm"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400 text-sm"
                 >
                   {CATEGORIES.map(c => (
                     <option key={c.id} value={c.id}>
@@ -413,7 +413,7 @@ export default function Expenses() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-3 bg-[#0F172A] border border-dashed border-gray-700 rounded-xl text-xs text-gray-400 flex items-center justify-center gap-2 hover:border-gray-500 transition-colors"
+                    className="w-full py-3 bg-[#0B132B] border border-dashed border-gray-700 rounded-xl text-xs text-gray-400 flex items-center justify-center gap-2 hover:border-gray-500 transition-colors"
                   >
                     <Camera size={16} className="text-green-400" /> Adjuntar o tomar foto
                   </button>
@@ -427,7 +427,7 @@ export default function Expenses() {
                   placeholder="Detalles opcionales..."
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400 text-sm"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400 text-sm"
                 />
               </div>
             </div>

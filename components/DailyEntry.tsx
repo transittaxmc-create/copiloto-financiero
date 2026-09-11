@@ -1,12 +1,13 @@
 ﻿"use client";
 
 import { useState, useEffect } from 'react';
-import { Home, MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight, Store, Cloud, CloudOff } from 'lucide-react';
+import { MapPin, Coffee, ChevronDown, Check, Loader2, AlertCircle, DollarSign, Navigation, ArrowRight, Cloud, CloudOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { PLATFORMS, logoFor } from '@/lib/logos';
 import { addLocalTrip, getLocalTrips } from '@/lib/localStore';
 import { syncTripsWithSupabase } from '@/lib/syncManager';
+import { getCategoryIcon } from '@/lib/category-icons';
 
 interface LocationPoint {
   name: string;
@@ -15,8 +16,10 @@ interface LocationPoint {
   lat?: number;
   lng?: number;
   type?: 'business' | 'residence' | 'unknown';
+  category?: string;
   fullAddress?: string;
   capturedAt?: string; // ISO timestamp exacto al presionar el botón GPS
+  accuracy?: number;   // precisión GPS en metros (pos.coords.accuracy)
 }
 
 // Plataformas compartidas (ver @/lib/logos): 14 opciones con logo redondo
@@ -34,6 +37,7 @@ export default function DailyEntry() {
   const [isLocatingPickup, setIsLocatingPickup] = useState(false);
   const [isLocatingDropoff, setIsLocatingDropoff] = useState(false);
   const [onBreak, setOnBreak] = useState(false);
+  const [gpsWarning, setGpsWarning] = useState(false);
 
   // Fecha y hora dinámica
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -81,6 +85,12 @@ export default function DailyEntry() {
         async (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy; // metros
+          if (typeof accuracy === 'number' && accuracy > 50) {
+            setGpsWarning(true);
+          } else {
+            setGpsWarning(false);
+          }
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
@@ -97,21 +107,23 @@ export default function DailyEntry() {
             const locType = isBusiness ? 'business' : 'residence';
             // Nombre REAL del negocio (Nominatim lo trae en data.name); para residencia usamos la calle
             const displayName = isBusiness && data.name ? data.name : road;
-            setLoc({ name: displayName, city, time: nowStr, lat, lng, type: locType, fullAddress, capturedAt });
+            setLoc({ name: displayName, city, time: nowStr, lat, lng, type: locType, category: data.category || data.type || '', fullAddress, capturedAt, accuracy });
           } catch {
-            setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: 'Local', time: nowStr, lat, lng, type: 'unknown', capturedAt });
+            setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: 'Local', time: nowStr, lat, lng, type: 'unknown', capturedAt, accuracy });
           } finally {
             setLoading(false);
           }
         },
         () => {
           // GPS denegado/fallido: dato HONESTO, no "Residencia" falsa
+          setGpsWarning(true);
           setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: '', time: nowStr, type: 'unknown', capturedAt });
           setLoading(false);
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
+      setGpsWarning(true);
       setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: '', time: nowStr, type: 'unknown', capturedAt });
       setLoading(false);
     }
@@ -121,6 +133,12 @@ export default function DailyEntry() {
     if (!gross && !tips) {
       setFeedback({ text: 'Por favor ingresa al menos Gross fare o Propinas', type: 'error' });
       setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+
+    if (gpsWarning) {
+      setFeedback({ text: '⚠️ Ubicación no confirmada: reintenta GPS o confirma manualmente', type: 'error' });
+      setTimeout(() => setFeedback(null), 4000);
       return;
     }
 
@@ -332,7 +350,7 @@ export default function DailyEntry() {
           type="button"
           onClick={() => captureLocation('pickup')}
           disabled={isLocatingPickup}
-          className="bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-slate-950 font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all"
+          className="bg-gradient-to-r from-[#10B981] to-[#0D9668] hover:from-[#34D399] hover:to-[#10B981] text-slate-950 font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-[#10B981]/25 active:scale-[0.98] transition-all"
         >
           {isLocatingPickup ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} className="fill-current" />}
           <span className="text-xs uppercase tracking-wide">Pickup now</span>
@@ -342,7 +360,7 @@ export default function DailyEntry() {
           type="button"
           onClick={() => captureLocation('dropoff')}
           disabled={isLocatingDropoff}
-          className="bg-gradient-to-r from-sky-400 to-sky-500 hover:from-sky-300 hover:to-sky-400 text-slate-950 font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 active:scale-[0.98] transition-all"
+          className="bg-gradient-to-r from-[#06B6D4] to-[#0891B2] hover:from-[#22D3EE] hover:to-[#06B6D4] text-slate-950 font-bold py-3.5 px-3 rounded-2xl flex items-center justify-center gap-2 shadow-[#06B6D4]/25 active:scale-[0.98] transition-all"
         >
           {isLocatingDropoff ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} className="fill-current" />}
           <span className="text-xs uppercase tracking-wide">Dropoff now</span>
@@ -351,15 +369,11 @@ export default function DailyEntry() {
 
       {/* Tarjetas Indicadoras de Ubicación */}
       <div className="grid grid-cols-2 gap-2.5">
-        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between h-[60px] shadow-sm ${
-          pickup ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-700/80'
+        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between h-[68px] overflow-hidden shrink-0 shadow-sm ${
+          pickup ? 'border-[#10B981]/40 bg-[#10B981]/5' : 'border-slate-700/80'
         }`}>
-          <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs truncate">
-            {pickup?.type === 'business' ? (
-              <Store size={13} className="shrink-0" />
-            ) : (
-              <Home size={13} className="shrink-0" />
-            )}
+          <div className="flex items-center gap-1 text-[#10B981] font-bold text-xs truncate">
+            <span className="shrink-0 text-[10px] leading-none">{pickup ? getCategoryIcon(pickup?.category, pickup?.name) : '📍'}</span>
             <span className="truncate">
               {pickup ? (pickup.type === 'residence' ? 'Residencia' : pickup.name) : 'Pickup Pendiente'}
             </span>
@@ -369,15 +383,11 @@ export default function DailyEntry() {
           </div>
         </div>
 
-        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between h-[60px] shadow-sm ${
-          dropoff ? 'border-sky-500/40 bg-sky-500/5' : 'border-slate-700/80'
+        <div className={`bg-[#1E293B] rounded-2xl p-3 border transition-colors flex flex-col justify-between h-[68px] overflow-hidden shrink-0 shadow-sm ${
+          dropoff ? 'border-[#06B6D4]/40 bg-[#06B6D4]/5' : 'border-slate-700/80'
         }`}>
-          <div className="flex items-center gap-1 text-sky-400 font-bold text-xs truncate">
-            {dropoff?.type === 'business' ? (
-              <Store size={13} className="shrink-0" />
-            ) : (
-              <MapPin size={13} className="shrink-0" />
-            )}
+          <div className="flex items-center gap-1 text-[#06B6D4] font-bold text-xs truncate">
+            <span className="shrink-0 text-[10px] leading-none">{dropoff ? getCategoryIcon(dropoff?.category, dropoff?.name) : '📌'}</span>
             <span className="truncate">
               {dropoff ? (dropoff.type === 'residence' ? 'Residencia' : dropoff.name) : 'Destino Pendiente'}
             </span>
@@ -387,6 +397,33 @@ export default function DailyEntry() {
           </div>
         </div>
       </div>
+
+      {/* Tarjeta de advertencia GPS: precisión > 50m o error de geolocalización */}
+      {gpsWarning && (
+        <div className="bg-amber-500/10 border border-amber-500/60 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+          <p className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+            <AlertCircle size={15} className="shrink-0" />
+            <span>⚠️ Ubicación no confirmada — la precisión del GPS es insuficiente ({Math.round((pickup?.accuracy ?? dropoff?.accuracy ?? 0))}m)</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => { setGpsWarning(false); captureLocation(pickup ? 'dropoff' : 'pickup'); }}
+              className="px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-[10px] uppercase tracking-wide"
+            >
+              Reintentar GPS
+            </button>
+            <button
+              type="button"
+              onClick={() => setGpsWarning(false)}
+              disabled={!pickup && !dropoff}
+              className="px-2.5 py-1.5 rounded-lg border border-amber-500/50 bg-slate-800/50 text-amber-400 font-bold text-[10px] uppercase tracking-wide"
+            >
+              Confirmar manualmente
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tips & Toll */}
       <div className="grid grid-cols-2 gap-2.5">

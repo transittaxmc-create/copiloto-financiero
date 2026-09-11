@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { EZPassRecord } from '@/lib/ezpass-types';
 import { SOURCE_CONFIG, STATUS_CONFIG } from '@/lib/ezpass-types';
@@ -50,7 +50,7 @@ export default function InvestigationView({
         <div className="p-4 space-y-3">
           {/* Mi registro (original) */}
           {originalRecord && (
-            <div className="bg-[#0F172A] rounded-xl p-3 border border-emerald-500/30">
+            <div className="bg-[#0B132B] rounded-xl p-3 border border-emerald-500/30">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">{SOURCE_CONFIG[originalRecord.source].icon}</span>
                 <span className="text-xs font-bold text-emerald-400 uppercase">Mi Registro (Original)</span>
@@ -72,7 +72,7 @@ export default function InvestigationView({
           )}
 
           {/* Cargo externo (duplicado) */}
-          <div className="bg-[#0F172A] rounded-xl p-3 border border-red-500/30">
+          <div className="bg-[#0B132B] rounded-xl p-3 border border-red-500/30">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-lg">{sourceConfig.icon}</span>
               <span className="text-xs font-bold text-red-400 uppercase">Cargo Externo (Duplicado?)</span>

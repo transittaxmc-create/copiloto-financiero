@@ -18,7 +18,7 @@ export default function AICreditPage(): React.ReactElement {
   const savings = TIPS.reduce((s, t) => s + t.savings, 0);
 
   return (
-    <div className="min-h-screen bg-[#0F172A] pb-24">
+    <div className="min-h-screen bg-[#0B132B] pb-24">
       <div className="px-4 py-6">
         <DailyEntryHeader />
         <div className="flex gap-2 border-b border-slate-700/50 pt-4">

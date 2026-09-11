@@ -191,7 +191,7 @@ export function Register({ onReconcile }: RegisterProps) {
         <div className="space-y-4">
           {groupedTrips.map((group) => (
             <Card key={group.platform_id} className="bg-[#1E293B] border-gray-800 overflow-hidden">
-              <div className="bg-[#0F172A] p-4 border-b border-gray-800">
+              <div className="bg-[#0B132B] p-4 border-b border-gray-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center">
@@ -225,7 +225,7 @@ export function Register({ onReconcile }: RegisterProps) {
                     <div key={trip.id} className="transition-colors">
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : trip.id)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-[#0F172A]/50 transition-colors"
+                        className="w-full p-4 flex items-center justify-between hover:bg-[#0B132B]/50 transition-colors"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className={cn("p-2 rounded-lg border", status.color)}>
@@ -253,7 +253,7 @@ export function Register({ onReconcile }: RegisterProps) {
                       </button>
 
                       {isExpanded && (
-                        <div className="px-4 pb-4 pt-0 bg-[#0F172A]/30 border-t border-gray-800">
+                        <div className="px-4 pb-4 pt-0 bg-[#0B132B]/30 border-t border-gray-800">
                           <div className="pt-3 space-y-3">
                             {trip.pickup_gps && trip.dropoff_gps && (
                               <div className="space-y-2">

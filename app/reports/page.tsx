@@ -37,7 +37,7 @@ export default function ReportsPage(): React.ReactElement {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F172A] pb-24">
+    <div className="min-h-screen bg-[#0B132B] pb-24">
       <div className="px-4 py-6">
         <DailyEntryHeader />
         <div className="space-y-4 pt-4">

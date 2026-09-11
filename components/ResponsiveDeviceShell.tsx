@@ -26,7 +26,7 @@ export default function ResponsiveDeviceShell({ children }: ResponsiveDeviceShel
   return (
     <div className="min-h-screen bg-[#0A0E17] text-white flex flex-col">
       {/* 1. BARRA SUPERIOR DE CONTROL (visible solo en pantallas >= 768px) */}
-      <header className="hidden md:flex w-full border-b border-slate-800/80 bg-[#0F172A]/90 backdrop-blur-md px-6 py-3 items-center justify-between z-30 shrink-0">
+      <header className="hidden md:flex w-full border-b border-slate-800/80 bg-[#0B132B]/90 backdrop-blur-md px-6 py-3 items-center justify-between z-30 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black">
             <Car size={20} />
@@ -107,11 +107,11 @@ export default function ResponsiveDeviceShell({ children }: ResponsiveDeviceShel
                 
                 {/* Pantalla del teléfono */}
                 <div 
-                  className="w-full h-full bg-[#0F172A] md:rounded-[42px] overflow-hidden flex flex-col relative"
+                  className="w-full h-full bg-[#0B132B] md:rounded-[42px] overflow-hidden flex flex-col relative"
                   style={{ transform: "translateZ(0)" }}
                 >
                   {/* Barra de estado con Dynamic Island (visible en desktop dentro del marco) */}
-                  <div className="hidden md:flex w-full h-11 bg-[#0F172A] items-center justify-between px-6 shrink-0 z-30 select-none pt-1">
+                  <div className="hidden md:flex w-full h-11 bg-[#0B132B] items-center justify-between px-6 shrink-0 z-30 select-none pt-1">
                     <span className="text-[13px] font-semibold text-slate-200 tracking-tight">{timeStr}</span>
                     <div className="w-24 h-5 bg-black rounded-full flex items-center justify-between px-2.5 shadow-inner">
                       <div className="w-2 h-2 rounded-full bg-emerald-500/80 animate-pulse" />
@@ -130,7 +130,7 @@ export default function ResponsiveDeviceShell({ children }: ResponsiveDeviceShel
                   </div>
 
                   {/* Indicador inferior Home Bar en desktop */}
-                  <div className="hidden md:flex w-full h-4 bg-[#0F172A] items-center justify-center shrink-0 z-30 pointer-events-none pb-1">
+                  <div className="hidden md:flex w-full h-4 bg-[#0B132B] items-center justify-center shrink-0 z-30 pointer-events-none pb-1">
                     <div className="w-32 h-1 bg-slate-500/50 rounded-full" />
                   </div>
                 </div>
@@ -144,7 +144,7 @@ export default function ResponsiveDeviceShell({ children }: ResponsiveDeviceShel
           ) : (
             /* VISTA EXPANDIDA EN DESKTOP */
             <div 
-              className="w-full max-h-[88vh] bg-[#0F172A] border border-slate-800 rounded-3xl shadow-2xl overflow-y-auto flex flex-col relative"
+              className="w-full max-h-[88vh] bg-[#0B132B] border border-slate-800 rounded-3xl shadow-2xl overflow-y-auto flex flex-col relative"
               style={{ transform: "translateZ(0)" }}
             >
               <div className="p-2 border-b border-slate-800/80 bg-slate-900/40 px-6 py-3 flex items-center justify-between text-xs text-slate-400">

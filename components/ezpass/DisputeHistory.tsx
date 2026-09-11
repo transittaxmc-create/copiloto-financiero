@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { EZPassDispute } from '@/lib/ezpass-types';
 import { CheckCircle2, Clock, FileText, XCircle } from 'lucide-react';
@@ -44,7 +44,7 @@ export default function DisputeHistory({ disputes, onClose }: Props) {
               const StatusIcon = config.icon;
 
               return (
-                <div key={dispute.id} className="bg-[#0F172A] rounded-xl p-3 border border-slate-700/50">
+                <div key={dispute.id} className="bg-[#0B132B] rounded-xl p-3 border border-slate-700/50">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">

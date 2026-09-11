@@ -23,10 +23,10 @@ Nuevo módulo ACID: **PENDIENTE** — `supabase/migration_ledger_acid.sql` fue r
 ## Conflictos abiertos (NO cambiar sin confirmación del usuario)
 | Área | Actual (producción) | Objetivo (Master Prompt) |
 |---|---|---|
-| Fondo de tema | Dark Slate `#0F172A` | Cyber Dark `#0B132B` + neón pickup `#10B981` / dropoff `#06B6D4` |
-| Alto tarjeta GPS | `h-[60px]` | `h-[68px]` + `overflow-hidden` + `shrink-0` |
+| Fondo de tema | Cyber Dark `#0B132B` ✅ | neón pickup `#10B981` / dropoff `#06B6D4` ✅ (aplicado 2026-09-11) |
+| Alto tarjeta GPS | `h-[68px]` + `overflow-hidden` + `shrink-0` ✅ (aplicado 2026-09-11) | — |
 | Backend | API routes Next.js + Supabase | FastAPI + SQLAlchemy Core (solo si usuario confirma reescritura) |
-| Multi-tenant | RLS por auth.uid() | header `X-Tenant-ID` (cubierto por `migration_ledger_acid.sql`) |
+| Multi-tenant | RLS por auth.uid() | header `X-Tenant-ID` (cubierto por `migration_ledger_acid.sql`, PENDIENTE) |
 
 > REGLA DE MIGRACIÓN DE TEMA: nunca página por página; una sola pasada global + un solo commit.
 

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0F172A",
+  themeColor: "#0B132B",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -38,7 +38,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <html lang="es" className={`${spaceGrotesk.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen bg-[#0F172A] text-[#F8FAFC] font-sans antialiased overflow-x-hidden">
+      <body className="min-h-screen bg-[#0B132B] text-[#F8FAFC] font-sans antialiased overflow-x-hidden">
         <Sidebar />
         <main className="md:ml-64 min-h-screen pb-[env(safe-area-inset-bottom)]">
           {children}

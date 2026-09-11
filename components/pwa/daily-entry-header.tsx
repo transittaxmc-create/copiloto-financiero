@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 
@@ -48,7 +48,7 @@ export function DailyEntryHeader() {
   const formattedDate = currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   return (
-    <div className="flex flex-col justify-start items-start p-4 bg-[#0F172A] text-white border-b border-gray-800 w-full">
+    <div className="flex flex-col justify-start items-start p-4 bg-[#0B132B] text-white border-b border-gray-800 w-full">
       <div className="flex items-center justify-between w-full">
         <h1 className="text-lg font-bold">{greeting}, Miguel.</h1>
         <span className={`text-xs font-semibold ${isGpsActive ? "text-green-400" : "text-red-400"}`}>

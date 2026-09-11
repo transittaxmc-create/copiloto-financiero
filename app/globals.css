@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Pipeline Tailwind: postcss.config.js (tailwindcss + autoprefixer).
  * NOTA de build: cambiar postcss.config.js NO invalida la caché del módulo
  * CSS en Vercel/Next — tocar este archivo sí fuerza el reprocesado.
@@ -10,7 +10,7 @@
 
 :root {
   color-scheme: dark;
-  --bg-primary: #0f172a;
+  --bg-primary: #0B132B;
   --bg-secondary: #1e293b;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;

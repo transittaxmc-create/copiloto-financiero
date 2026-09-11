@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { 
@@ -280,7 +280,7 @@ export default function RegisterFlow() {
   const ledgerCount = trips.filter(t => ['in_ledger', 'en_ledger'].includes((t.status || '').toLowerCase())).length;
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white p-4 pb-28 font-sans">
+    <div className="min-h-screen bg-[#0B132B] text-white p-4 pb-28 font-sans">
       {/* Toast */}
       {toast && (
         <div
@@ -531,7 +531,7 @@ export default function RegisterFlow() {
                 </div>
 
                 {/* GPS Pickup / Dropoff con coordenadas y hora */}
-                <div className="bg-[#0F172A]/40 rounded-xl border border-gray-700/50 p-2.5 mt-1 space-y-1.5">
+                <div className="bg-[#0B132B]/40 rounded-xl border border-gray-700/50 p-2.5 mt-1 space-y-1.5">
                   <div className="flex items-start gap-1.5 text-[11px] text-gray-300">
                     <MapPin size={12} className="text-green-400 shrink-0" />
                     <span className="font-semibold">Pickup:</span>
@@ -556,7 +556,7 @@ export default function RegisterFlow() {
                 </div>
 
                 {trip.trip_notes && (
-                  <p className="text-[11px] text-gray-400 italic mb-3 bg-[#0F172A]/50 px-2.5 py-1.5 rounded-lg">
+                  <p className="text-[11px] text-gray-400 italic mb-3 bg-[#0B132B]/50 px-2.5 py-1.5 rounded-lg">
                     {trip.trip_notes}
                   </p>
                 )}
@@ -643,7 +643,7 @@ export default function RegisterFlow() {
 
             <div className="space-y-3 mb-5">
               {/* Sección de Ubicación */}
-              <div className="bg-[#0F172A] rounded-xl p-3 border border-gray-700/50">
+              <div className="bg-[#0B132B] rounded-xl p-3 border border-gray-700/50">
                 <h4 className="text-xs font-bold text-gray-300 mb-2 flex items-center gap-1">
                   <MapPin size={12} className="text-green-400" /> Detalles de Ubicación
                 </h4>
@@ -708,7 +708,7 @@ export default function RegisterFlow() {
                   inputMode="decimal"
                   value={editGross}
                   onChange={e => setEditGross(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white font-bold outline-none focus:border-green-400"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white font-bold outline-none focus:border-green-400"
                   placeholder="0.00"
                 />
               </div>
@@ -721,7 +721,7 @@ export default function RegisterFlow() {
                     inputMode="decimal"
                     value={editTips}
                     onChange={e => setEditTips(e.target.value)}
-                    className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                    className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
                     placeholder="0.00"
                   />
                 </div>
@@ -732,7 +732,7 @@ export default function RegisterFlow() {
                     inputMode="decimal"
                     value={editTolls}
                     onChange={e => setEditTolls(e.target.value)}
-                    className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                    className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
                     placeholder="0.00"
                   />
                 </div>
@@ -745,7 +745,7 @@ export default function RegisterFlow() {
                   inputMode="decimal"
                   value={editFee}
                   onChange={e => setEditFee(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
                   placeholder="0.00"
                 />
               </div>
@@ -757,7 +757,7 @@ export default function RegisterFlow() {
                   inputMode="decimal"
                   value={editBlackCarFee}
                   onChange={e => setEditBlackCarFee(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white outline-none focus:border-green-400"
                   placeholder="0.00"
                 />
               </div>
@@ -768,7 +768,7 @@ export default function RegisterFlow() {
                   type="text"
                   value={editNotes}
                   onChange={e => setEditNotes(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-gray-700 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-green-400"
+                  className="w-full bg-[#0B132B] border border-gray-700 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-green-400"
                   placeholder="Referencia o detalles..."
                 />
               </div>
