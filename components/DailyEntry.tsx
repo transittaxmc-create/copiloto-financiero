@@ -92,10 +92,12 @@ export default function DailyEntry() {
             const state = data.address?.state || '';
             const postcode = data.address?.postcode || '';
             const fullAddress = `${houseNumber} ${road}, ${city}, ${state} ${postcode}`.trim();
-            const categories = data.category || data.type || '';
-            const isBusiness = categories.includes('shop') || categories.includes('amenity') || categories.includes('tourism') || (data.name && data.name !== road);
+            const categories = `${data.category || ''} ${data.type || ''}`;
+            const isBusiness = categories.includes('shop') || categories.includes('amenity') || categories.includes('tourism') || categories.includes('office') || (data.name && data.name !== road);
             const locType = isBusiness ? 'business' : 'residence';
-            setLoc({ name: road, city, time: nowStr, lat, lng, type: locType, fullAddress, capturedAt });
+            // Nombre REAL del negocio (Nominatim lo trae en data.name); para residencia usamos la calle
+            const displayName = isBusiness && data.name ? data.name : road;
+            setLoc({ name: displayName, city, time: nowStr, lat, lng, type: locType, fullAddress, capturedAt });
           } catch {
             setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: 'Local', time: nowStr, lat, lng, type: 'unknown', capturedAt });
           } finally {
@@ -103,23 +105,14 @@ export default function DailyEntry() {
           }
         },
         () => {
-          setLoc({
-            name: type === 'pickup' ? 'Residencia' : 'Business',
-            city: type === 'pickup' ? 'Lindenhurst' : 'Copiague',
-            time: nowStr,
-            capturedAt,
-          });
+          // GPS denegado/fallido: dato HONESTO, no "Residencia" falsa
+          setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: '', time: nowStr, type: 'unknown', capturedAt });
           setLoading(false);
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
-      setLoc({
-        name: type === 'pickup' ? 'Residencia' : 'Business',
-        city: type === 'pickup' ? 'Lindenhurst' : 'Copiague',
-        time: nowStr,
-        capturedAt,
-      });
+      setLoc({ name: type === 'pickup' ? 'Recogida GPS' : 'Destino GPS', city: '', time: nowStr, type: 'unknown', capturedAt });
       setLoading(false);
     }
   };
@@ -368,7 +361,7 @@ export default function DailyEntry() {
               <Home size={13} className="shrink-0" />
             )}
             <span className="truncate">
-              {pickup ? (pickup.type === 'business' ? pickup.name : 'Residencia') : 'Pickup Pendiente'}
+              {pickup ? (pickup.type === 'residence' ? 'Residencia' : pickup.name) : 'Pickup Pendiente'}
             </span>
           </div>
           <div className="text-[11px] text-slate-400 truncate">
@@ -386,7 +379,7 @@ export default function DailyEntry() {
               <MapPin size={13} className="shrink-0" />
             )}
             <span className="truncate">
-              {dropoff ? (dropoff.type === 'business' ? dropoff.name : 'Residencia') : 'Destino Pendiente'}
+              {dropoff ? (dropoff.type === 'residence' ? 'Residencia' : dropoff.name) : 'Destino Pendiente'}
             </span>
           </div>
           <div className="text-[11px] text-slate-400 truncate">
