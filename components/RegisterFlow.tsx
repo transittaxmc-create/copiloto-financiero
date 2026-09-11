@@ -24,8 +24,12 @@ import {
   Wifi,
   WifiOff,
   Eraser,
-  ChevronRight
+  ChevronRight,
+  FileSearch
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const BankAuditModal = dynamic(() => import('./BankAuditModal'), { ssr: false });
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { logoFor } from '@/lib/logos';
@@ -74,6 +78,7 @@ export default function RegisterFlow() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'reconciled' | 'in_ledger'>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [resetting, setResetting] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Modal de edición
@@ -328,6 +333,9 @@ export default function RegisterFlow() {
 
   return (
     <div className="min-h-screen bg-[#0B132B] text-white p-4 pb-28 font-sans">
+      {/* Auditoría Bancaria (OCR) */}
+      <BankAuditModal open={auditOpen} onClose={() => setAuditOpen(false)} />
+
       {/* Toast */}
       {toast && (
         <div
@@ -367,6 +375,13 @@ export default function RegisterFlow() {
           <p className="text-xs text-gray-400 mt-0.5">Flujo: Captura → Reconciliación → Ledger</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAuditOpen(true)}
+            className="p-2.5 bg-[#1E293B] border border-sky-500/40 rounded-xl hover:border-sky-400 transition-colors active:scale-95"
+            title="Auditar Extracto (OCR): detectar balance con IA"
+          >
+            <FileSearch size={18} className="text-sky-400" />
+          </button>
           <button
             onClick={handleResetAll}
             disabled={resetting}
