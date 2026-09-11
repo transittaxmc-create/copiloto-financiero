@@ -428,18 +428,18 @@ export default function DailyEntry() {
         </div>
       </div>
 
-      {/* Fila compacta: Plataforma | Clock In | Clock Out | Break */}
-      <div className="flex gap-1.5 items-stretch">
-        <div className="w-[104px] shrink-0 relative">
+      {/* Fila: Plataforma (alineada al ancho del campo Gross Fare) | In · Out · Break */}
+      <div className="flex gap-2.5 items-stretch">
+        <div className="w-[calc(50%-5px)] shrink-0 relative">
           <button
             type="button"
             onClick={() => setShowPlatforms(!showPlatforms)}
-            className="w-full bg-[#1E293B] rounded-xl border border-slate-700/80 px-1.5 py-2 flex items-center justify-center gap-1 hover:border-slate-500 transition-colors shadow-sm min-w-0"
+            className="w-full bg-[#1E293B] rounded-xl border border-slate-700/80 px-2 py-2 flex items-center justify-center gap-1.5 hover:border-slate-500 transition-colors shadow-sm min-w-0"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoFor(platform)} alt={platform} className="w-5 h-5 rounded-full object-contain shrink-0" />
-            <span className="font-semibold text-[11px] text-slate-100 truncate">{platform}</span>
-            <ChevronDown size={12} className={`text-slate-400 shrink-0 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
+            <span className="font-semibold text-xs text-slate-100 truncate">{platform}</span>
+            <ChevronDown size={13} className={`text-slate-400 shrink-0 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
           </button>
 
           {showPlatforms && (
@@ -468,12 +468,14 @@ export default function DailyEntry() {
           )}
         </div>
 
+        {/* In · Out · Break en el 50% restante */}
+        <div className="flex-1 flex gap-1.5 min-w-0">
         {/* Clock In: inicia turno (verde neón cuando activo) */}
         <button
           type="button"
           onClick={handleClockIn}
           disabled={isClockedIn}
-          className={`px-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm shrink-0 ${
+          className={`px-1 flex-1 min-w-0 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm ${
             isClockedIn
               ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-emerald-500/25'
               : 'bg-slate-800/60 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10'
@@ -488,7 +490,7 @@ export default function DailyEntry() {
           type="button"
           onClick={handleClockOut}
           disabled={!isClockedIn}
-          className={`px-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm shrink-0 ${
+          className={`px-1 flex-1 min-w-0 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm ${
             isClockedIn
               ? 'bg-slate-800/60 border-red-500/50 text-red-400 hover:bg-red-500/10'
               : 'bg-slate-900/60 border-slate-700/50 text-slate-600 cursor-not-allowed'
@@ -503,7 +505,7 @@ export default function DailyEntry() {
           type="button"
           onClick={() => setOnBreak(!onBreak)}
           disabled={!isClockedIn}
-          className={`px-2.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm shrink-0 ${
+          className={`px-1 flex-1 min-w-0 rounded-xl flex flex-col items-center justify-center gap-0.5 border text-[10px] font-bold transition-all shadow-sm ${
             onBreak
               ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-amber-500/20'
               : isClockedIn
@@ -514,6 +516,7 @@ export default function DailyEntry() {
           <Coffee size={14} />
           <span>{onBreak ? 'Pausa' : 'Break'}</span>
         </button>
+        </div>
       </div>
 
       {/* Aviso sutil de turno activo con hora de inicio + millas del turno */}
