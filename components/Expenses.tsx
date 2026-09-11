@@ -131,23 +131,30 @@ export default function Expenses() {
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-5">
+      <div className="flex justify-between items-center gap-2 flex-wrap mb-5">
         <div>
           <h1 className="text-2xl font-bold">Gastos y Recibos</h1>
           <p className="text-xs text-gray-400 mt-0.5">Control de deducciones para impuestos</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-green-400 text-black font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 hover:bg-green-300 transition-colors shadow"
-        >
-          <Camera size={15} /> Escanear Recibo
-        </button>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-green-400 text-black font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 hover:bg-green-300 transition-colors shadow"
-        >
-          <Plus size={16} /> Nuevo Gasto
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setShowModal(true);
+              setTimeout(() => fileInputRef.current?.click(), 150);
+            }}
+            title="Escanear Recibo"
+            aria-label="Escanear Recibo"
+            className="bg-green-400/15 border border-green-400/40 text-green-400 p-2 rounded-xl hover:bg-green-400/25 transition-colors shadow"
+          >
+            <Camera size={15} />
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-green-400 text-black font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 hover:bg-green-300 transition-colors shadow"
+          >
+            <Plus size={16} /> Nuevo Gasto
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
