@@ -30,6 +30,7 @@ import {
 import dynamic from 'next/dynamic';
 
 const BankAuditModal = dynamic(() => import('./BankAuditModal'), { ssr: false });
+import FinanceRegisterTable from './FinanceRegisterTable';
 import { supabase } from '@/lib/supabase';
 import BottomNav from './BottomNav';
 import { logoFor } from '@/lib/logos';
@@ -929,6 +930,9 @@ export default function RegisterFlow() {
           </div>
         </div>
       )}
+
+      {/* Registro Numérico y Auditoría de Caja */}
+      <FinanceRegisterTable />
 
       {/* Bottom Navigation */}
       <BottomNav />
