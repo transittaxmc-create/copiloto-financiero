@@ -8,6 +8,9 @@ import { PLATFORMS, logoFor } from '@/lib/logos';
 import { addLocalTrip, getLocalTrips } from '@/lib/localStore';
 import { syncTripsWithSupabase } from '@/lib/syncManager';
 import { getCategoryIcon } from '@/lib/category-icons';
+import dynamic from 'next/dynamic';
+
+const PinAdjustModal = dynamic(() => import('./PinAdjustModal'), { ssr: false });
 
 interface LocationPoint {
   name: string;
@@ -38,6 +41,7 @@ export default function DailyEntry() {
   const [isLocatingDropoff, setIsLocatingDropoff] = useState(false);
   const [onBreak, setOnBreak] = useState(false);
   const [gpsWarning, setGpsWarning] = useState(false);
+  const [pinModal, setPinModal] = useState<{ target: 'pickup' | 'dropoff' } | null>(null);
 
   // Fecha y hora dinámica
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -210,6 +214,17 @@ export default function DailyEntry() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Confirmar pin ajustado manualmente en el mapa: cierra la advertencia de precisión
+  const handlePinConfirm = (loc: LocationPoint) => {
+    if (pinModal?.target === 'pickup') {
+      setPickup((prev) => ({ ...prev!, ...loc }));
+    } else if (pinModal?.target === 'dropoff') {
+      setDropoff((prev) => ({ ...prev!, ...loc }));
+    }
+    setGpsWarning(false);
+    setPinModal(null);
   };
 
   const hour = currentTime.getHours();
@@ -415,6 +430,14 @@ export default function DailyEntry() {
             </button>
             <button
               type="button"
+              onClick={() => setPinModal({ target: pickup?.accuracy && pickup.accuracy > 50 ? 'pickup' : dropoff ? 'dropoff' : 'pickup' })}
+              disabled={!pickup && !dropoff}
+              className="px-2.5 py-1.5 rounded-lg border border-amber-500/50 bg-slate-800/50 text-amber-400 font-bold text-[10px] uppercase tracking-wide"
+            >
+              Ajustar pin en mapa
+            </button>
+            <button
+              type="button"
               onClick={() => setGpsWarning(false)}
               disabled={!pickup && !dropoff}
               className="px-2.5 py-1.5 rounded-lg border border-amber-500/50 bg-slate-800/50 text-amber-400 font-bold text-[10px] uppercase tracking-wide"
@@ -496,6 +519,21 @@ export default function DailyEntry() {
         {saving ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} className="stroke-[3]" />}
         <span>{saving ? 'Guardando en Supabase...' : 'Guardar Trip'}</span>
       </button>
+
+      {/* Modal: Ajustar pin en mapa (precisión GPS insuficiente) */}
+      <PinAdjustModal
+        open={pinModal !== null}
+        initial={
+          pinModal?.target === 'pickup' && pickup?.lat != null && pickup?.lng != null
+            ? { lat: pickup.lat, lng: pickup.lng }
+            : pinModal?.target === 'dropoff' && dropoff?.lat != null && dropoff?.lng != null
+              ? { lat: dropoff.lat, lng: dropoff.lng }
+              : null
+        }
+        title={pinModal?.target === 'dropoff' ? 'Ajustar destino (pin)' : 'Ajustar recogida (pin)'}
+        onClose={() => setPinModal(null)}
+        onConfirm={handlePinConfirm}
+      />
 
       {/* Barra de Navegación PWA */}
       <BottomNav />

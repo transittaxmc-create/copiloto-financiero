@@ -40,7 +40,7 @@ Vista compacta = **L1 + L4** (2 líneas). L2/L3 viven SIEMPRE en BD/JSON y se mu
 > Regla: Nominatim comercial → icono de categoría; residencial (`house`/`apartment`/`residential`) → 🏠 Residencia.
 
 ## Errores de GPS
-`accuracy > 50m` o error de geolocalización → tarjeta fija **"⚠️ Ubicación no confirmada"** + bloquear cierre del viaje + acciones: `[Reintentar GPS] [Ajustar pin en mapa] [Confirmar manualmente]`.
+`accuracy > 50m` o error de geolocalización → tarjeta fija **"⚠️ Ubicación no confirmada"** + bloquear cierre del viaje + acciones: `[Reintentar GPS] [Ajustar pin en mapa] [Confirmar manualmente]` (las 3 implementadas 2026-09-11; "Ajustar pin" abre modal Leaflet OSM con pin arrastrable → reverse-geocode → accuracy confiable 5m).
 
 ## Navegación
 Navbar flotante tipo cápsula SOLO móvil (`md:hidden`); sidebar en ≥768px. Safe area: `pb-[calc(0.5rem+env(safe-area-inset-bottom))]` (ya aplicado, commit `0ac7f11`).
