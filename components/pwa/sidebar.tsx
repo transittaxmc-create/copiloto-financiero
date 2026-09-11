@@ -18,7 +18,7 @@ export function Sidebar(): React.ReactElement {
   const router = useRouter();
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 flex-col border-r border-slate-700/50 bg-slate-900/95 backdrop-blur-md">
+    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 flex-col border-r border-slate-700/50 bg-[#0B132B]/95 backdrop-blur-md">
       {/* Logo */}
       <div className="flex items-center gap-3 border-b border-slate-700/50 px-6 py-5">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500">

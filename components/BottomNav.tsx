@@ -13,7 +13,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0B132B]/95 backdrop-blur-md border-t border-slate-800/80 flex justify-around items-center py-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] z-40 px-2">
+    <nav className="md:hidden fixed bottom-3 left-2 right-2 max-w-md mx-auto bg-[#0B132B]/95 backdrop-blur-md border border-slate-700/60 rounded-2xl shadow-2xl shadow-black/40 flex justify-around items-center py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 px-2">
       {items.map((item) => {
         const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
         return (

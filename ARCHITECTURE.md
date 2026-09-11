@@ -43,7 +43,7 @@ Vista compacta = **L1 + L4** (2 líneas). L2/L3 viven SIEMPRE en BD/JSON y se mu
 `accuracy > 50m` o error de geolocalización → tarjeta fija **"⚠️ Ubicación no confirmada"** + bloquear cierre del viaje + acciones: `[Reintentar GPS] [Ajustar pin en mapa] [Confirmar manualmente]` (las 3 implementadas 2026-09-11; "Ajustar pin" abre modal Leaflet OSM con pin arrastrable → reverse-geocode → accuracy confiable 5m).
 
 ## Navegación
-Navbar flotante tipo cápsula SOLO móvil (`md:hidden`); sidebar en ≥768px. Safe area: `pb-[calc(0.5rem+env(safe-area-inset-bottom))]` (ya aplicado, commit `0ac7f11`).
+Navbar flotante tipo cápsula SOLO móvil (`md:hidden`): `fixed bottom-3 left-2 right-2 max-w-md mx-auto rounded-2xl` + borde + shadow ✅ (verificado 2026-09-11). Sidebar en ≥768px (`hidden md:flex`, tema `#0B132B`). Safe area: `pb-[calc(0.5rem+env(safe-area-inset-bottom))]`. Páginas con la cápsula: `pb-24`/`pb-28` evitan solapamiento.
 
 ## Ledger de doble entrada (PENDIENTE)
 La migración `supabase/migration_ledger_acid.sql` **no existe aún en el repo**. Cuando se cree, al guardar trip se insertarán automáticamente en `journal_lines`: **DÉBITO** `Gross Fare + Tips` · **CRÉDITO** `Net Payout` · **CRÉDITO** `Platform Fee + Tolls`.
