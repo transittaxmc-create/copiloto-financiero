@@ -430,22 +430,20 @@ export default function DailyEntry() {
 
       {/* Fila compacta: Plataforma | Clock In | Clock Out | Break */}
       <div className="flex gap-1.5 items-stretch">
-        <div className="flex-1 min-w-0 relative">
+        <div className="w-[104px] shrink-0 relative">
           <button
             type="button"
             onClick={() => setShowPlatforms(!showPlatforms)}
-            className="w-full bg-[#1E293B] rounded-xl border border-slate-700/80 px-2 py-2 flex items-center justify-between hover:border-slate-500 transition-colors shadow-sm min-w-0"
+            className="w-full bg-[#1E293B] rounded-xl border border-slate-700/80 px-1.5 py-2 flex items-center justify-center gap-1 hover:border-slate-500 transition-colors shadow-sm min-w-0"
           >
-            <div className="flex items-center gap-1.5 min-w-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoFor(platform)} alt={platform} className="w-5 h-5 rounded-full object-contain shrink-0" />
-              <span className="font-semibold text-xs text-slate-100 truncate">{platform}</span>
-            </div>
-            <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoFor(platform)} alt={platform} className="w-5 h-5 rounded-full object-contain shrink-0" />
+            <span className="font-semibold text-[11px] text-slate-100 truncate">{platform}</span>
+            <ChevronDown size={12} className={`text-slate-400 shrink-0 transition-transform ${showPlatforms ? 'rotate-180' : ''}`} />
           </button>
 
           {showPlatforms && (
-            <div className="absolute top-full mt-1.5 left-0 right-0 bg-[#1E293B] border border-slate-700 rounded-xl overflow-hidden z-30 shadow-2xl">
+            <div className="absolute top-full mt-1.5 left-0 w-[176px] bg-[#1E293B] border border-slate-700 rounded-xl overflow-hidden z-30 shadow-2xl">
               {PLATFORMS.map((p) => (
                 <button
                   key={p}
