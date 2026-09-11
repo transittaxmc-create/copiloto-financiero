@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   BankSnapshot,
@@ -18,7 +18,15 @@ export interface DayData {
   id: string;
   date: string;
   isWorkingDay: boolean;
+  /** Meta de ingreso del dia (selector 300/400/500). */
+  dailyTarget: number;
   platforms: IncomePlatform[];
+}
+
+export interface ProjectionPoint {
+  label: string;
+  cashOnHand: number;
+  expenses: number;
 }
 
 export interface UpcomingExpense {
@@ -68,6 +76,7 @@ interface FinanceState {
   setStartingBalance: (balance: number) => void;
   setVerifiedBalance: (amount: number, source?: BankSource) => void;
   toggleWorkingDay: (dayId: string) => void;
+  setDayTarget: (dayId: string, target: number) => void;
   markObligationPaid: (id: string, amount?: number, restBalance?: boolean) => void;
   isVerifiedToday: () => boolean;
   getObligations: () => ObligationInput[];
@@ -82,7 +91,42 @@ interface FinanceState {
     suggestedDailyIncrease: number;
   };
   getWorkingDaysRemaining: () => number;
+  getWeeklyTarget: () => number;
+  getWeeklyActual: () => number;
+  getCashFlowProjection: (weeks?: number) => ProjectionPoint[];
 }
+
+function makeDay(
+  id: string,
+  date: string,
+  isWorkingDay: boolean,
+  dailyTarget: number,
+  actualAmount = 0
+): DayData {
+  return {
+    id,
+    date,
+    isWorkingDay,
+    dailyTarget,
+    platforms: [
+      {
+        platformName: 'Uber',
+        projectedAmount: isWorkingDay ? dailyTarget : 0,
+        actualAmount,
+      },
+    ],
+  };
+}
+
+const defaultDays: DayData[] = [
+  makeDay('1', 'Lun', true, 300, 300),
+  makeDay('2', 'Mar', true, 300, 280),
+  makeDay('3', 'Mié', true, 400, 420),
+  makeDay('4', 'Jue', true, 400, 200),
+  makeDay('5', 'Vie', true, 500, 0),
+  makeDay('6', 'Sáb', true, 400, 0),
+  makeDay('7', 'Dom', false, 0, 0),
+];
 
 const defaultExpenses: UpcomingExpense[] = [
   { id: 'e1', name: 'Combustible semanal', amount: 80, dueDate: isoPlusDays(1), category: 'fuel' },
@@ -98,12 +142,7 @@ export const useFinanceStore = create<FinanceState>()(
       startingBalance: 1250.0,
       bankSnapshot: { amount: 1250.0, verifiedAt: null, source: 'seed' },
       previousBalance: null,
-      days: [
-        { id: '1', date: 'Lun', isWorkingDay: true, platforms: [{ platformName: 'Uber', projectedAmount: 180, actualAmount: 200 }] },
-        { id: '2', date: 'Mar', isWorkingDay: true, platforms: [{ platformName: 'Uber', projectedAmount: 180, actualAmount: 175 }] },
-        { id: '3', date: 'Mié', isWorkingDay: false, platforms: [{ platformName: 'Uber', projectedAmount: 0, actualAmount: 0 }] },
-        { id: '4', date: 'Jue', isWorkingDay: true, platforms: [{ platformName: 'Uber', projectedAmount: 180, actualAmount: 0 }] },
-      ],
+      days: defaultDays,
       upcomingExpenses: defaultExpenses,
 
       setStartingBalance: (balance) => {
@@ -126,7 +165,36 @@ export const useFinanceStore = create<FinanceState>()(
 
       toggleWorkingDay: (dayId) =>
         set((state) => ({
-          days: state.days.map((d) => (d.id === dayId ? { ...d, isWorkingDay: !d.isWorkingDay } : d)),
+          days: state.days.map((d) => {
+            if (d.id !== dayId) return d;
+            const isWorkingDay = !d.isWorkingDay;
+            const target = d.dailyTarget > 0 ? d.dailyTarget : 300;
+            return {
+              ...d,
+              isWorkingDay,
+              dailyTarget: target,
+              platforms: d.platforms.map((p, i) => ({
+                ...p,
+                projectedAmount: isWorkingDay && i === 0 ? target : 0,
+              })),
+            };
+          }),
+        })),
+
+      setDayTarget: (dayId, target) =>
+        set((state) => ({
+          days: state.days.map((d) => {
+            if (d.id !== dayId) return d;
+            const next = Math.max(0, target);
+            return {
+              ...d,
+              dailyTarget: next,
+              platforms: d.platforms.map((p, i) => ({
+                ...p,
+                projectedAmount: d.isWorkingDay && i === 0 ? next : p.projectedAmount,
+              })),
+            };
+          }),
         })),
 
       markObligationPaid: (id, amount, restBalance = true) => {
@@ -215,14 +283,61 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       getWorkingDaysRemaining: () => get().days.filter((d) => d.isWorkingDay).length,
+
+      getWeeklyTarget: () =>
+        get()
+          .days.filter((d) => d.isWorkingDay)
+          .reduce((acc, d) => acc + (d.dailyTarget || 0), 0),
+
+      getWeeklyActual: () =>
+        get().days.reduce(
+          (acc, d) => acc + d.platforms.reduce((s, p) => s + p.actualAmount, 0),
+          0
+        ),
+
+      getCashFlowProjection: (weeks = 6) => {
+        const { startingBalance, days, upcomingExpenses } = get();
+        const weeklyIncome = days
+          .filter((d) => d.isWorkingDay)
+          .reduce((acc, d) => acc + (d.dailyTarget || 0), 0);
+        const openBills = upcomingExpenses.reduce(
+          (acc, e) => acc + Math.max(0, e.amount - (e.paidAmount ?? 0)),
+          0
+        );
+        // Prorratea las obligaciones abiertas sobre el horizonte proyectado.
+        const weeklyExpense = weeks > 0 ? openBills / weeks : 0;
+
+        const points: ProjectionPoint[] = [];
+        let cash = startingBalance;
+        for (let i = 0; i <= weeks; i++) {
+          if (i > 0) cash = Math.max(0, cash + weeklyIncome - weeklyExpense);
+          points.push({
+            label: i === 0 ? 'Hoy' : `S${i}`,
+            cashOnHand: Math.round(cash),
+            expenses: Math.round(i === 0 ? 0 : weeklyExpense),
+          });
+        }
+        return points;
+      },
     }),
     {
       name: 'copiloto_finance_v2',
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown) => {
         const p = (persisted ?? {}) as Partial<FinanceState>;
+        const days =
+          p.days && p.days.length === 7
+            ? p.days.map((d, i) => ({
+                ...d,
+                dailyTarget:
+                  typeof d.dailyTarget === 'number' && d.dailyTarget > 0
+                    ? d.dailyTarget
+                    : defaultDays[i]?.dailyTarget ?? 300,
+              }))
+            : defaultDays;
         return {
           ...p,
+          days,
           bankSnapshot: p.bankSnapshot ?? {
             amount: p.startingBalance ?? 1250,
             verifiedAt: null,

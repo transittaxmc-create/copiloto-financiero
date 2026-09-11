@@ -88,10 +88,10 @@ export default function BankBalanceHero() {
         <button
           type="button"
           onClick={onReconcile}
-          className={`sm:w-auto w-full px-5 py-3 rounded-xl text-xs font-black tracking-wide text-white transition-all active:scale-[0.98] shadow-lg ${
+          className={`sm:w-auto w-full px-5 py-3 rounded-full text-xs font-black tracking-wide text-white transition-all active:scale-[0.98] shadow-lg ${
             flash
               ? "bg-emerald-500 shadow-emerald-500/30"
-              : "bg-violet-600 hover:bg-violet-500 shadow-violet-900/40"
+              : "bg-fuchsia-500 hover:bg-fuchsia-400 shadow-fuchsia-900/40"
           }`}
         >
           {flash ? "✓ ACTUALIZADO" : "CONCILIAR Y ACTUALIZAR"}

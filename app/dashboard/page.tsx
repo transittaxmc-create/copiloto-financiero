@@ -8,6 +8,9 @@ import BottomNav from "@/components/BottomNav";
 import BankBalanceHero from "@/components/briefing/BankBalanceHero";
 import CopilotInbox from "@/components/briefing/CopilotInbox";
 import PaymentPlanBoard from "@/components/briefing/PaymentPlanBoard";
+import WeekPlanner from "@/components/briefing/WeekPlanner";
+import CashFlowChart from "@/components/briefing/CashFlowChart";
+import IncomeTargetRing from "@/components/briefing/IncomeTargetRing";
 import { buildPaymentPlan } from "@/lib/engines/paymentPlanner";
 import { buildBriefingNotes } from "@/lib/engines/copilotPolicy";
 import type { PaymentPlanItem } from "@/lib/engines/types";
@@ -15,16 +18,16 @@ import {
   ShieldCheck,
   AlertTriangle,
   TrendingUp,
-  Calendar,
   Clock,
 } from "lucide-react";
 
 export default function DashboardPage() {
   const startingBalance = useFinanceStore((s) => s.startingBalance);
-  const days = useFinanceStore((s) => s.days);
   const previousBalance = useFinanceStore((s) => s.previousBalance);
-  const toggleWorkingDay = useFinanceStore((s) => s.toggleWorkingDay);
   const markObligationPaid = useFinanceStore((s) => s.markObligationPaid);
+  const getWeeklyTarget = useFinanceStore((s) => s.getWeeklyTarget);
+  const getWeeklyActual = useFinanceStore((s) => s.getWeeklyActual);
+  const getCashFlowProjection = useFinanceStore((s) => s.getCashFlowProjection);
   const getMinProjectedBalance = useFinanceStore((s) => s.getMinProjectedBalance);
   const getUpcomingExpensesTotal = useFinanceStore((s) => s.getUpcomingExpensesTotal);
   const getInvestableSurplus = useFinanceStore((s) => s.getInvestableSurplus);
@@ -36,7 +39,7 @@ export default function DashboardPage() {
   const bankSnapshot = useFinanceStore((s) => s.bankSnapshot);
 
   const heroRef = useRef<HTMLDivElement>(null);
-  const scheduleRef = useRef<HTMLElement>(null);
+  const scheduleRef = useRef<HTMLDivElement>(null);
 
   const verified = isVerifiedToday();
   const minProjected = getMinProjectedBalance();
@@ -45,6 +48,9 @@ export default function DashboardPage() {
   const emergencyData = getEmergencyPlan();
   const obligations = getObligations();
   const workingDaysRemaining = getWorkingDaysRemaining();
+  const weeklyTarget = getWeeklyTarget();
+  const weeklyActual = getWeeklyActual();
+  const projection = getCashFlowProjection(6);
 
   const plan = useMemo(
     () => buildPaymentPlan(startingBalance, obligations),
@@ -216,52 +222,16 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section
-        ref={scheduleRef}
-        className="bg-[#1E293B] border border-slate-700/60 rounded-2xl p-5 space-y-3"
-      >
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3 gap-2">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#0EA5E9]" /> Plan semanal de ingresos
-          </h3>
-          <span className="text-[10px] text-slate-500 shrink-0">
-            Toca un dia para activar/descansar
-          </span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="lg:col-span-2">
+          <CashFlowChart points={projection} />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {days.map((day) => {
-            const projected = day.platforms.reduce(
-              (acc, p) => acc + p.projectedAmount,
-              0
-            );
-            return (
-              <button
-                key={day.id}
-                type="button"
-                onClick={() => toggleWorkingDay(day.id)}
-                className={`rounded-xl border p-3 text-left transition-all active:scale-[0.98] ${
-                  day.isWorkingDay
-                    ? "bg-[#10B981]/10 border-[#10B981]/40 hover:border-[#10B981]/70"
-                    : "bg-slate-900/60 border-slate-700/50 hover:border-slate-600"
-                }`}
-              >
-                <p
-                  className={`text-xs font-bold ${
-                    day.isWorkingDay ? "text-emerald-400" : "text-slate-500"
-                  }`}
-                >
-                  {day.date}
-                </p>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  {day.isWorkingDay
-                    ? `Proy. $${projected.toFixed(0)}`
-                    : "Descanso"}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+        <IncomeTargetRing actual={weeklyActual} target={weeklyTarget} />
+      </div>
+
+      <div ref={scheduleRef}>
+        <WeekPlanner />
+      </div>
 
       <FinanceRegisterTable />
       <BottomNav />
